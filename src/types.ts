@@ -20,6 +20,13 @@ export interface CalendarEvent {
    * single mention so one-off events stay visible.
    */
   seriesId?: string;
+  /**
+   * Importance; higher matters more (default 0). Text digests name
+   * high-priority events first, and briefDigest guarantees packing space
+   * for events at or above its breakThroughAt threshold. Tags can also
+   * carry weight via the tagPriorities option.
+   */
+  priority?: number;
 }
 
 /** An event after parsing, always attached to digest output for drill-down. */

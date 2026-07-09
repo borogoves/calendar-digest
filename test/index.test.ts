@@ -402,6 +402,69 @@ describe("briefDigest", () => {
   });
 });
 
+describe("briefDigest with priorities", () => {
+  const burst = [
+    ev("dentist", "2026-07-14T15:00:00Z"),
+    ev("board meeting", "2026-07-14T18:00:00Z"),
+    ev("recital", "2026-07-15T22:00:00Z"),
+    ev("party", "2026-07-15T23:00:00Z"),
+    ev("hike", "2026-07-16T14:00:00Z"),
+    ev("brunch", "2026-07-16T15:00:00Z"),
+  ];
+  const flight = ev("flight", "2026-08-30T13:00:00Z", { priority: 2 }); // 9 AM NY, Sunday
+
+  it("breaks a far high-priority event through nearer trivia at watch size", () => {
+    const brief = briefDigest([...burst, flight], { ...NY, budget: "watch" });
+    expect(brief.text).toBe("Quiet til Tue · flight Aug 30 9 AM · +6");
+    expect(brief.text.length).toBeLessThanOrEqual(40);
+  });
+
+  it("gives tags the same power via tagPriorities", () => {
+    const tagged = ev("flight", "2026-08-30T13:00:00Z", { tags: ["travel"] });
+    const brief = briefDigest([...burst, tagged], {
+      ...NY,
+      budget: "watch",
+      tagPriorities: { travel: 2 },
+    });
+    expect(brief.text).toBe("Quiet til Tue · flight Aug 30 9 AM · +6");
+  });
+
+  it("keeps chronological display order when everything fits", () => {
+    const brief = briefDigest([...burst, flight], { ...NY, budget: "display" });
+    expect(brief.text).toBe(
+      "Nothing until Tue, then a busy stretch Jul 14–16: 6 events, incl. dentist, flight on Aug 30 at 9:00 AM.",
+    );
+  });
+
+  it("headlines the burst with the next-weightiest event when its top one broke through", () => {
+    const events = [
+      ...burst.slice(0, 4),
+      ev("flight", "2026-07-15T13:00:00Z", { priority: 2 }), // inside the stretch
+      ev("recital", "2026-07-16T22:00:00Z", { priority: 1 }),
+    ];
+    const brief = briefDigest(events, { ...NY, budget: "display" });
+    expect(brief.text).toContain("flight on Wed at 9:00 AM");
+    expect(brief.text).toContain("incl. recital");
+  });
+
+  it("names high-priority events first in textDigest sentences", () => {
+    const events = [
+      ev("A", "2026-07-09T17:00:00Z"),
+      ev("B", "2026-07-09T18:00:00Z"),
+      ev("C", "2026-07-09T19:00:00Z"),
+      ev("Sofia call", "2026-07-09T20:00:00Z", { tags: ["family"] }),
+    ];
+    const digest = textDigest(events, {
+      ...NY,
+      bins: ["today"],
+      tagPriorities: { family: 5 },
+    });
+    expect(digest.sentences[0]!.text).toBe(
+      "4 events today: Sofia call at 4:00 PM, A at 1:00 PM, B at 2:00 PM, and 1 more.",
+    );
+  });
+});
+
 describe("calendarDigest", () => {
   it("produces one entry per day with zone-local dates", () => {
     const digest = calendarDigest([ev("Party", "2026-07-20")], NY);

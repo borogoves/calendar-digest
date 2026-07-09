@@ -1,5 +1,7 @@
 import { resolveOptions } from "./events.js";
 import { formatMonthDay, formatTime } from "./format.js";
+import type { PriorityOptions } from "./priority.js";
+import { eventPriority } from "./priority.js";
 import type { ShapeDigestOptions } from "./shape.js";
 import { shapeDigest } from "./shape.js";
 import { dayNumber } from "./tz.js";
@@ -16,11 +18,17 @@ const PRESETS: Record<BriefPreset, number> = {
   display: 300,
 };
 
-export interface BriefDigestOptions extends ShapeDigestOptions {
+export interface BriefDigestOptions extends ShapeDigestOptions, PriorityOptions {
   /** Character budget, or a surface preset. Default "widget" (140). */
   budget?: number | BriefPreset;
   /** Clusters with at least this many events narrate as a stretch. Default 3. */
   burstThreshold?: number;
+  /**
+   * Events with effective priority at or above this always break through:
+   * they are packed before everything except the opening, so they get
+   * named even when nearer, lesser events don't fit. Default 2.
+   */
+  breakThroughAt?: number;
 }
 
 export interface BriefFragment {
@@ -39,20 +47,31 @@ export interface BriefDigest {
 
 interface Candidate {
   kind: BriefFragment["kind"];
+  /** Packing order: lower ranks claim budget first. */
+  rank: number;
+  /** Display order: chronological, regardless of rank. */
+  index: number;
   /** Renderings, most to least verbose; the packer takes the largest that fits. */
   prose: string[];
   compact: string[];
   events: ResolvedEvent[];
 }
 
+interface Chosen {
+  cand: Candidate;
+  text: string;
+}
+
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const RANK = { opening: 0, breakThrough: 1, normal: 2, series: 3, more: 9 } as const;
 
 /**
  * A calendar summary packed into a fixed character budget. Fragments are
- * prioritized (what's next → busy stretches → one-off events → recurring
- * background) and each degrades to shorter renderings before being dropped.
- * Honesty guarantee: events that don't fit are counted in a trailing
- * "+N" / "and N more" fragment — the summary never hides them silently.
+ * packed by priority (opening → break-through events → busy stretches and
+ * one-offs → recurring background) but always displayed chronologically.
+ * Each fragment degrades to shorter renderings before being dropped, and
+ * events that don't fit are counted in a trailing "+N" / "and N more" —
+ * the summary never hides them silently.
  */
 export function briefDigest(events: CalendarEvent[], options?: BriefDigestOptions): BriefDigest {
   const opts = resolveOptions(options);
@@ -61,6 +80,7 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     typeof options?.budget === "number" ? options.budget : PRESETS[options?.budget ?? "widget"];
   const compact = budget <= 80;
   const burstThreshold = options?.burstThreshold ?? 3;
+  const breakThroughAt = options?.breakThroughAt ?? 2;
   const horizonDays = options?.days ?? 90;
   const shape = shapeDigest(events, options);
   const todayDay = dayNumber(opts.now, tz);
@@ -99,53 +119,78 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     const prefix = day - todayDay <= 1 ? label : `on ${label}`;
     return e.allDay ? prefix : `${prefix} at ${formatTime(e.start, tz)}`;
   };
+  const priorityOf = (e: ResolvedEvent): number => eventPriority(e, options?.tagPriorities);
 
-  // --- Candidates, in priority order ------------------------------------
+  // --- Candidates ---------------------------------------------------------
   const candidates: Candidate[] = [];
+  let index = 0;
   const totalEvents =
     shape.clusters.reduce((n, c) => n + c.count, 0) +
     shape.background.reduce((n, s) => n + s.events.length, 0);
 
   if (shape.clusters.length === 0) {
     if (shape.background.length > 0) {
-      candidates.push({ kind: "quiet", prose: ["just the usual"], compact: ["Usual only"], events: [] });
+      candidates.push({
+        kind: "quiet", rank: RANK.opening, index: index++,
+        prose: ["just the usual"], compact: ["Usual only"], events: [],
+      });
     } else {
       candidates.push({
-        kind: "quiet",
+        kind: "quiet", rank: RANK.opening, index: index++,
         prose: [`no events in the next ${horizonDays} days`],
-        compact: [`Free ${horizonDays}d`],
-        events: [],
+        compact: [`Free ${horizonDays}d`], events: [],
       });
     }
   } else if (shape.leadingQuietDays >= 2) {
     const firstDay = dayNumber(shape.clusters[0]!.events[0]!.start, tz);
     candidates.push({
-      kind: "quiet",
+      kind: "quiet", rank: RANK.opening, index: index++,
       prose: [`nothing until ${dayLabel(firstDay)}`],
-      compact: [`Quiet til ${dayLabel(firstDay)}`],
-      events: [],
+      compact: [`Quiet til ${dayLabel(firstDay)}`], events: [],
     });
   } else {
     const next = shape.nextEvent!;
     const name = next.source.name;
     candidates.push({
-      kind: "next",
+      kind: "next", rank: RANK.opening, index: index++,
       prose: [`next up: ${name} ${whenLong(next)}`, `next: ${name} ${whenShort(next)}`],
       compact: [`Next: ${name} ${whenShort(next)}`, `${name} ${whenShort(next)}`],
       events: [next],
     });
   }
+  const openedWithNext = candidates[0]!.kind === "next";
+
+  const eventCandidate = (e: ResolvedEvent, rank: number): Candidate => ({
+    kind: "event", rank, index: index++,
+    prose: [`${e.source.name} ${whenLong(e)}`, `${e.source.name} ${whenShort(e)}`],
+    compact: [`${e.source.name} ${whenShort(e)}`, `${e.source.name} ${dayLabel(dayNumber(e.start, tz))}`],
+    events: [e],
+  });
 
   let named = 0;
+  const brokeThrough = new Set<ResolvedEvent>();
   for (const cluster of shape.clusters) {
-    const firstDay = dayNumber(cluster.events[0]!.start, tz);
-    const lastDay = dayNumber(cluster.events[cluster.events.length - 1]!.start, tz);
+    const breakers = cluster.events
+      .filter((e) => priorityOf(e) >= breakThroughAt && !(openedWithNext && e === shape.nextEvent))
+      .sort((a, b) => priorityOf(b) - priorityOf(a) || a.start.getTime() - b.start.getTime());
+    for (const e of breakers) {
+      brokeThrough.add(e);
+      candidates.push(eventCandidate(e, RANK.breakThrough));
+    }
     if (cluster.count >= burstThreshold) {
+      const firstDay = dayNumber(cluster.events[0]!.start, tz);
+      const lastDay = dayNumber(cluster.events[cluster.events.length - 1]!.start, tz);
       const range = rangeLabel(firstDay, lastDay);
+      // Headline the weightiest event not already named by a break-through.
+      const rest = cluster.events.filter((e) => !brokeThrough.has(e));
+      const lead = rest.reduce(
+        (best, e) => (priorityOf(e) > priorityOf(best) ? e : best),
+        rest[0] ?? cluster.events[0]!,
+      );
       candidates.push({
-        kind: "burst",
+        kind: "burst", rank: RANK.normal, index: index++,
         prose: [
-          `a busy stretch ${range}: ${cluster.count} events, incl. ${cluster.events[0]!.source.name}`,
+          `a busy stretch ${range}: ${cluster.count} events, incl. ${lead.source.name}`,
           `${cluster.count} events ${range}`,
         ],
         compact: [`${cluster.count} in ${cluster.days}d`],
@@ -153,29 +198,24 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
       });
     } else {
       for (const e of cluster.events) {
-        if (e === shape.nextEvent && candidates[0]!.kind === "next") continue;
+        if (brokeThrough.has(e) || (openedWithNext && e === shape.nextEvent)) continue;
         if (named >= 8) break;
         named += 1;
-        candidates.push({
-          kind: "event",
-          prose: [`${e.source.name} ${whenLong(e)}`, `${e.source.name} ${whenShort(e)}`],
-          compact: [`${e.source.name} ${whenShort(e)}`, `${e.source.name} ${dayLabel(dayNumber(e.start, tz))}`],
-          events: [e],
-        });
+        candidates.push(eventCandidate(e, RANK.normal));
       }
     }
   }
   for (const series of shape.background) {
     const detail = series.time === undefined ? series.cadence : `${series.cadence} at ${series.time}`;
     candidates.push({
-      kind: "series",
+      kind: "series", rank: RANK.series, index: index++,
       prose: [`${series.name} (${detail})`],
       compact: [`${series.name} ${series.cadence}`],
       events: series.events,
     });
   }
 
-  // --- Packing -----------------------------------------------------------
+  // --- Packing: fill by rank, display by index ----------------------------
   const connector = (prev: BriefFragment["kind"] | undefined, kind: BriefFragment["kind"]): string => {
     if (prev === undefined) return "";
     if (compact) return " · ";
@@ -184,29 +224,30 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     if (prev === "quiet") return ", then ";
     return ", ";
   };
-
-  const chosen: Array<{ cand: Candidate; text: string }> = [];
-  const lengthOf = (): number =>
-    chosen.reduce(
+  const assemblyLength = (list: Chosen[]): number =>
+    list.reduce(
       (len, c, i) =>
-        len + connector(i > 0 ? chosen[i - 1]!.cand.kind : undefined, c.cand.kind).length + c.text.length,
+        len + connector(i > 0 ? list[i - 1]!.cand.kind : undefined, c.cand.kind).length + c.text.length,
       0,
     );
+  const inserted = (list: Chosen[], entry: Chosen): Chosen[] =>
+    [...list, entry].sort((a, b) => a.cand.index - b.cand.index);
   // Prose reserves one character for the closing period.
   const effective = compact ? budget : budget - 1;
 
-  for (const cand of candidates) {
+  let chosen: Chosen[] = [];
+  const packOrder = [...candidates].sort((a, b) => a.rank - b.rank || a.index - b.index);
+  for (const cand of packOrder) {
     const variants = compact ? cand.compact : cand.prose;
-    const conn = connector(chosen.length > 0 ? chosen[chosen.length - 1]!.cand.kind : undefined, cand.kind);
-    let picked = variants.find((v) => lengthOf() + conn.length + v.length <= effective);
+    let picked = variants.find((v) => assemblyLength(inserted(chosen, { cand, text: v })) <= effective);
     // The opening always renders, even over a tiny budget — a summary that
     // says nothing is worse than one that runs a little long.
     if (picked === undefined && chosen.length === 0) picked = variants[variants.length - 1]!;
-    if (picked !== undefined) chosen.push({ cand, text: picked });
+    if (picked !== undefined) chosen = inserted(chosen, { cand, text: picked });
   }
 
-  // Honesty pass: whatever isn't accounted for becomes "+N", shrinking the
-  // tail of the summary if that's what it takes to fit.
+  // Honesty pass: whatever isn't accounted for becomes "+N", shrinking or
+  // sacrificing the least important fragments to make room.
   const coveredCount = (): number => {
     const set = new Set<ResolvedEvent>();
     for (const c of chosen) for (const e of c.cand.events) set.add(e);
@@ -217,42 +258,48 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     const n = totalEvents - coveredCount();
     if (n <= 0) break;
     const more: Candidate = {
-      kind: "more",
+      kind: "more", rank: RANK.more, index: Number.MAX_SAFE_INTEGER,
       prose: [`${n} more by ${horizonEndLabel}`, `${n} more`],
-      compact: [`+${n}`],
-      events: [],
+      compact: [`+${n}`], events: [],
     };
     const variants = compact ? more.compact : more.prose;
-    const conn = connector(chosen[chosen.length - 1]!.cand.kind, "more");
-    const picked = variants.find((v) => lengthOf() + conn.length + v.length <= effective);
+    const picked = variants.find((v) => assemblyLength(inserted(chosen, { cand: more, text: v })) <= effective);
     if (picked !== undefined) {
-      chosen.push({ cand: more, text: picked });
+      chosen = inserted(chosen, { cand: more, text: picked });
       break;
     }
-    if (chosen.length > 1) {
-      // Try shrinking the last fragment before sacrificing it entirely.
-      const last = chosen[chosen.length - 1]!;
-      const lastVariants = compact ? last.cand.compact : last.cand.prose;
-      const shorter = lastVariants.slice(lastVariants.indexOf(last.text) + 1);
+    const victims = chosen.filter((c) => c.cand.rank > RANK.opening);
+    if (victims.length > 0) {
+      const victim = victims.reduce((worst, c) =>
+        c.cand.rank > worst.cand.rank ||
+        (c.cand.rank === worst.cand.rank && c.cand.index > worst.cand.index)
+          ? c
+          : worst,
+      );
+      // Try shrinking the victim before sacrificing it entirely.
+      const victimVariants = compact ? victim.cand.compact : victim.cand.prose;
+      const shorter = victimVariants.slice(victimVariants.indexOf(victim.text) + 1);
       let fitted = false;
       for (const v of shorter) {
-        last.text = v;
-        const fit = variants.find((m) => lengthOf() + conn.length + m.length <= effective);
+        victim.text = v;
+        const fit = variants.find(
+          (m) => assemblyLength(inserted(chosen, { cand: more, text: m })) <= effective,
+        );
         if (fit !== undefined) {
-          chosen.push({ cand: more, text: fit });
+          chosen = inserted(chosen, { cand: more, text: fit });
           fitted = true;
           break;
         }
       }
       if (fitted) break;
-      chosen.pop();
+      chosen = chosen.filter((c) => c !== victim);
       continue;
     }
-    chosen.push({ cand: more, text: variants[variants.length - 1]! });
+    chosen = inserted(chosen, { cand: more, text: variants[variants.length - 1]! });
     break;
   }
 
-  // --- Assembly ----------------------------------------------------------
+  // --- Assembly ------------------------------------------------------------
   let text = "";
   chosen.forEach((c, i) => {
     text += connector(i > 0 ? chosen[i - 1]!.cand.kind : undefined, c.cand.kind) + c.text;

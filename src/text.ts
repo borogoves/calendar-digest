@@ -2,12 +2,14 @@ import type { CalendarEvent, ResolvedEvent } from "./types.js";
 import type { BinName } from "./bins.js";
 import { binEvents } from "./bins.js";
 import { describeEvent } from "./format.js";
+import type { PriorityOptions } from "./priority.js";
+import { eventPriority } from "./priority.js";
 import type { SeriesSummary } from "./series.js";
 import { summarizeSeries } from "./series.js";
 import type { TieredWindowOptions } from "./tiers.js";
 import { tieredWindow } from "./tiers.js";
 
-export interface TextDigestOptions extends TieredWindowOptions {
+export interface TextDigestOptions extends TieredWindowOptions, PriorityOptions {
   /** Hard cap on sentences (the "space budget"). Default 3. */
   maxSentences?: number;
   /**
@@ -81,7 +83,10 @@ export function textDigest(events: CalendarEvent[], options?: TextDigestOptions)
     if (sentences.length >= maxSentences) break;
     if (group.events.length === 0) continue;
     sentences.push({
-      text: groupSentence(group.events, group.phrase, group.more, group.spansDays, timeZone, maxNamed),
+      text: groupSentence(
+        group.events, group.phrase, group.more, group.spansDays,
+        timeZone, maxNamed, options?.tagPriorities,
+      ),
       events: group.events,
     });
   }
@@ -102,13 +107,20 @@ function groupSentence(
   includeDate: boolean,
   timeZone: string,
   maxNamed: number,
+  tagPriorities?: Record<string, number>,
 ): string {
   const count = events.length;
   const noun = count === 1 ? "event" : "events";
   const countPhrase = more ? `${count} more ${noun}` : `${count} ${noun}`;
 
   const { oneOffs, series } = summarizeSeries(events, timeZone);
-  const namedOneOffs = oneOffs.slice(0, maxNamed);
+  // Name the weightiest events first; ties stay chronological.
+  const ranked = [...oneOffs].sort(
+    (a, b) =>
+      eventPriority(b, tagPriorities) - eventPriority(a, tagPriorities) ||
+      a.start.getTime() - b.start.getTime(),
+  );
+  const namedOneOffs = ranked.slice(0, maxNamed);
   const namedSeries = series.slice(0, maxNamed);
   const covered =
     namedOneOffs.length + namedSeries.reduce((n, s) => n + s.events.length, 0);

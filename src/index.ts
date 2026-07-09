@@ -10,6 +10,8 @@ export type { ShapeDigest, ShapeDigestOptions, EventCluster, QuietStretch } from
 export { shapeDigest } from "./shape.js";
 export type { BriefDigest, BriefDigestOptions, BriefFragment, BriefPreset } from "./brief.js";
 export { briefDigest } from "./brief.js";
+export type { PriorityOptions } from "./priority.js";
+export { eventPriority } from "./priority.js";
 export type { TextDigest, TextDigestOptions, Sentence } from "./text.js";
 export { textDigest } from "./text.js";
 export type {
