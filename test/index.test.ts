@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   binEvents,
   calendarDigest,
+  resolveEvents,
+  summarizeSeries,
   textDigest,
   tieredWindow,
   timelineDigest,
@@ -140,12 +142,80 @@ describe("textDigest", () => {
     const digest = textDigest(events, { ...NY, bins: ["today", "tomorrow"], maxSentences: 1 });
     expect(digest.sentences).toHaveLength(1);
     expect(digest.sentences[0]!.text).toBe(
-      "6 events today, starting with Meeting 1 at 1:00 PM.",
+      "6 events today: Meeting 1 at 1:00 PM, Meeting 2 at 2:00 PM, Meeting 3 at 3:00 PM, and 3 more.",
     );
   });
 
   it("handles an empty list", () => {
     expect(textDigest([], NY).text).toBe("No upcoming events.");
+  });
+});
+
+describe("summarizeSeries", () => {
+  const TZ = "America/New_York";
+  const resolve = (events: CalendarEvent[]) => resolveEvents(events, TZ);
+
+  it("collapses a daily series with a consistent time", () => {
+    const events = resolve(
+      Array.from({ length: 5 }, (_, i) =>
+        ev("Call mom", `2026-07-${10 + i}T17:00:00Z`, { seriesId: "mom" }),
+      ),
+    );
+    const { oneOffs, series } = summarizeSeries(events, TZ);
+    expect(oneOffs).toHaveLength(0);
+    expect(series).toHaveLength(1);
+    expect(series[0]!.cadence).toBe("daily");
+    expect(series[0]!.time).toBe("1:00 PM");
+  });
+
+  it("detects weekly and monthly cadences", () => {
+    const weekly = resolve(
+      ["2026-07-10", "2026-07-17", "2026-07-24"].map((d) =>
+        ev("Zoom", `${d}T15:00:00Z`, { seriesId: "zoom" }),
+      ),
+    );
+    expect(summarizeSeries(weekly, TZ).series[0]!.cadence).toBe("weekly");
+
+    const monthly = resolve(
+      ["2026-07-15", "2026-08-15", "2026-09-15"].map((d) =>
+        ev("Rent", `${d}T12:00:00Z`, { seriesId: "rent" }),
+      ),
+    );
+    expect(summarizeSeries(monthly, TZ).series[0]!.cadence).toBe("monthly");
+  });
+
+  it("falls back to a count for irregular series and omits inconsistent times", () => {
+    const events = resolve([
+      ev("Gym", "2026-07-10T11:00:00Z", { seriesId: "gym" }),
+      ev("Gym", "2026-07-11T13:00:00Z", { seriesId: "gym" }),
+      ev("Gym", "2026-07-15T11:00:00Z", { seriesId: "gym" }),
+    ]);
+    const { series } = summarizeSeries(events, TZ);
+    expect(series[0]!.cadence).toBe("3×");
+    expect(series[0]!.time).toBeUndefined();
+  });
+
+  it("treats a series' lone instance as a one-off", () => {
+    const events = resolve([ev("Call mom", "2026-07-10T17:00:00Z", { seriesId: "mom" })]);
+    const { oneOffs, series } = summarizeSeries(events, TZ);
+    expect(series).toHaveLength(0);
+    expect(oneOffs).toHaveLength(1);
+  });
+});
+
+describe("textDigest with recurring series", () => {
+  it("names one-offs first and collapses each series to one mention", () => {
+    const events: CalendarEvent[] = [
+      ...Array.from({ length: 6 }, (_, i) =>
+        ev("Call mom", `2026-07-${10 + i}T17:00:00Z`, { seriesId: "mom" }),
+      ),
+      ev("Dentist", "2026-07-13T15:00:00Z"),
+    ];
+    const digest = textDigest(events, NY);
+    expect(digest.sentences[0]!.text).toBe(
+      "7 events in the next 7 days: Dentist on Mon, Jul 13 at 11:00 AM and Call mom (daily at 1:00 PM).",
+    );
+    expect(digest.sentences[0]!.events).toHaveLength(7);
   });
 });
 

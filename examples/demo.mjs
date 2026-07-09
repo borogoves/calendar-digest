@@ -23,6 +23,11 @@ const items = Array.isArray(raw) ? raw : (raw.events ?? raw.items ?? []);
 // Map Google Calendar events to CalendarEvent. All-day events arrive with a
 // `date` (sometimes serialized as midnight-UTC ISO); keep just the calendar
 // date so the library anchors them in the display zone.
+// Recurring instances share the ID prefix before "_<timestamp>"; use it as
+// the seriesId (the API's recurringEventId, when present, works the same).
+const seriesIdOf = (e) =>
+  e.recurringEventId ?? /^(.+)_\d{8}(?:T\d{6}Z?)?$/.exec(e.id ?? "")?.[1];
+
 const events = items
   .filter((e) => e.status !== "cancelled" && (e.start?.date || e.start?.dateTime))
   .map((e) => ({
@@ -31,6 +36,7 @@ const events = items
     start: e.start.date ? e.start.date.slice(0, 10) : e.start.dateTime,
     ...(e.end?.dateTime ? { end: e.end.dateTime } : {}),
     ...(e.htmlLink ? { link: e.htmlLink } : {}),
+    ...(seriesIdOf(e) ? { seriesId: seriesIdOf(e) } : {}),
     tags: [e.eventType ?? "default"],
   }));
 

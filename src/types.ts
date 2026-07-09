@@ -14,6 +14,12 @@ export interface CalendarEvent {
   description?: string;
   link?: string;
   tags?: string[];
+  /**
+   * Identifier shared by instances of a recurring series (e.g. Google
+   * Calendar's recurringEventId). Lets digests collapse repeats into a
+   * single mention so one-off events stay visible.
+   */
+  seriesId?: string;
 }
 
 /** An event after parsing, always attached to digest output for drill-down. */

@@ -2,6 +2,8 @@ import type { CalendarEvent, ResolvedEvent } from "./types.js";
 import type { BinName } from "./bins.js";
 import { binEvents } from "./bins.js";
 import { describeEvent } from "./format.js";
+import type { SeriesSummary } from "./series.js";
+import { summarizeSeries } from "./series.js";
 import type { TieredWindowOptions } from "./tiers.js";
 import { tieredWindow } from "./tiers.js";
 
@@ -88,6 +90,11 @@ export function textDigest(events: CalendarEvent[], options?: TextDigestOptions)
   return { text: sentences.map((s) => s.text).join(" "), sentences };
 }
 
+/**
+ * One-off events are privileged: they are named first, while recurring
+ * series each collapse to a single mention ("call mom (daily at 4:00 PM)").
+ * Whatever doesn't fit in `maxNamed` of each kind folds into "and N more".
+ */
 function groupSentence(
   events: ResolvedEvent[],
   phrase: string,
@@ -99,14 +106,27 @@ function groupSentence(
   const count = events.length;
   const noun = count === 1 ? "event" : "events";
   const countPhrase = more ? `${count} more ${noun}` : `${count} ${noun}`;
-  let sentence: string;
-  if (count <= maxNamed) {
-    const names = events.map((e) => describeEvent(e, timeZone, includeDate));
-    sentence = `${countPhrase} ${phrase}: ${joinList(names)}.`;
-  } else {
-    sentence = `${countPhrase} ${phrase}, starting with ${describeEvent(events[0]!, timeZone, includeDate)}.`;
-  }
+
+  const { oneOffs, series } = summarizeSeries(events, timeZone);
+  const namedOneOffs = oneOffs.slice(0, maxNamed);
+  const namedSeries = series.slice(0, maxNamed);
+  const covered =
+    namedOneOffs.length + namedSeries.reduce((n, s) => n + s.events.length, 0);
+  const overflow = count - covered;
+
+  const items = [
+    ...namedOneOffs.map((e) => describeEvent(e, timeZone, includeDate)),
+    ...namedSeries.map((s) => describeSeries(s)),
+  ];
+  if (overflow > 0) items.push(`${overflow} more`);
+
+  const sentence = `${countPhrase} ${phrase}: ${joinList(items)}.`;
   return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+}
+
+function describeSeries(series: SeriesSummary): string {
+  const detail = series.time === undefined ? series.cadence : `${series.cadence} at ${series.time}`;
+  return `${series.name} (${detail})`;
 }
 
 function joinList(items: string[]): string {
