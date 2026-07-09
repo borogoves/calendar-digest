@@ -1,7 +1,7 @@
 {
   "name": "calendar-digest",
   "version": "0.1.0",
-  "description": "",
+  "description": "Summarize a list of calendar events into text, timeline, and calendar digests sized for any display.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
