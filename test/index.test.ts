@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   binEvents,
+  briefDigest,
   calendarDigest,
   resolveEvents,
   shapeDigest,
@@ -310,6 +311,94 @@ describe("shapeDigest", () => {
     expect(shape.quietStretches).toEqual([
       { startDate: "2026-07-09", endDate: "2026-10-06", days: 90 },
     ]);
+  });
+});
+
+describe("briefDigest", () => {
+  // A quiet stretch, then six events across Tue–Thu of next week.
+  const burst = [
+    ev("dentist", "2026-07-14T15:00:00Z"),
+    ev("board meeting", "2026-07-14T18:00:00Z"),
+    ev("recital", "2026-07-15T22:00:00Z"),
+    ev("party", "2026-07-15T23:00:00Z"),
+    ev("hike", "2026-07-16T14:00:00Z"),
+    ev("brunch", "2026-07-16T15:00:00Z"),
+  ];
+
+  it("narrates quiet-then-burst in prose at widget size", () => {
+    const brief = briefDigest(burst, { ...NY, budget: "widget" });
+    expect(brief.text).toBe(
+      "Nothing until Tue, then a busy stretch Jul 14–16: 6 events, incl. dentist.",
+    );
+    expect(brief.text.length).toBeLessThanOrEqual(140);
+    const burstFragment = brief.fragments.find((f) => f.kind === "burst");
+    expect(burstFragment!.events).toHaveLength(6);
+  });
+
+  it("compresses the same story to watch size", () => {
+    const brief = briefDigest(burst, { ...NY, budget: "watch" });
+    expect(brief.text).toBe("Quiet til Tue · 6 in 3d");
+  });
+
+  it("leads with the next event and minutes when something is imminent", () => {
+    const brief = briefDigest([ev("Standup", "2026-07-09T16:45:00Z")], NY);
+    expect(brief.text).toBe("Next up: Standup in 45 min.");
+  });
+
+  it("never hides events: whatever is cut appears as a count", () => {
+    const scattered = [
+      ...burst,
+      ev("vet", "2026-08-10T18:00:00Z"),
+      ev("oil change", "2026-08-17T18:00:00Z"),
+      ev("book club", "2026-08-24T18:00:00Z"),
+      ev("haircut", "2026-08-31T18:00:00Z"),
+      ev("tax prep", "2026-09-07T18:00:00Z"),
+    ];
+    const brief = briefDigest(scattered, { ...NY, budget: "watch" });
+    expect(brief.text.length).toBeLessThanOrEqual(40);
+    const more = brief.fragments.find((f) => f.kind === "more");
+    expect(more).toBeDefined();
+    const shown = new Set(brief.fragments.flatMap((f) => f.events));
+    expect(shown.size + Number(more!.text.replace(/\D/g, ""))).toBe(scattered.length);
+  });
+
+  it("mentions background series in prose and absorbs them when tight", () => {
+    const events: CalendarEvent[] = [
+      ...Array.from({ length: 20 }, (_, i) => {
+        const day = String(10 + i).padStart(2, "0");
+        return ev("Call mom", `2026-07-${day}T17:00:00Z`, { seriesId: "mom" });
+      }),
+      ev("dentist", "2026-07-16T15:00:00Z"),
+    ];
+    const display = briefDigest(events, { ...NY, budget: "display" });
+    expect(display.text).toBe(
+      "Nothing until Jul 16, then dentist on Jul 16 at 11:00 AM, plus Call mom (daily at 1:00 PM).",
+    );
+    const watch = briefDigest(events, { ...NY, budget: "watch" });
+    expect(watch.text.length).toBeLessThanOrEqual(40);
+    expect(watch.text).toMatch(/\+\d+$/);
+  });
+
+  it("says when the horizon is empty", () => {
+    expect(briefDigest([], { ...NY, budget: "display" }).text).toBe(
+      "No events in the next 90 days.",
+    );
+    expect(briefDigest([], { ...NY, budget: "watch" }).text).toBe("Free 90d");
+  });
+
+  it("stays within every preset budget", () => {
+    const events = [
+      ...burst,
+      ev("vet", "2026-08-10T18:00:00Z"),
+      ...Array.from({ length: 10 }, (_, i) => {
+        const day = String(10 + i).padStart(2, "0");
+        return ev("Call mom", `2026-07-${day}T17:00:00Z`, { seriesId: "mom" });
+      }),
+    ];
+    for (const budget of [40, 80, 140, 170, 300]) {
+      const brief = briefDigest(events, { ...NY, budget });
+      expect(brief.text.length, `budget ${budget}: "${brief.text}"`).toBeLessThanOrEqual(budget);
+    }
   });
 });
 

@@ -5,6 +5,7 @@
 import { readFileSync } from "node:fs";
 import {
   binEvents,
+  briefDigest,
   calendarDigest,
   shapeDigest,
   textDigest,
@@ -77,6 +78,12 @@ for (const c of shape.clusters) {
 }
 for (const q of shape.quietStretches) console.log(`  quiet   ${q.startDate} → ${q.endDate} (${q.days}d)`);
 for (const s of shape.background) console.log(`  background: ${s.name} (${s.cadence})`);
+
+console.log("\n— briefDigest at each surface preset —");
+for (const preset of ["watch", "banner", "widget", "spoken", "display"]) {
+  const brief = briefDigest(events, { ...options, budget: preset });
+  console.log(`  ${preset.padEnd(8)} [${String(brief.text.length).padStart(3)}/${brief.budget}] ${brief.text}`);
+}
 
 console.log("\n— drill-down: events behind the first tiered sentence —");
 const digest = textDigest(events, options);
