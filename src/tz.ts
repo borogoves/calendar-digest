@@ -105,6 +105,17 @@ export function weekdayOf(year: number, month: number, day: number): number {
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 }
 
+/** Days since the epoch of the calendar date `date` falls on in `timeZone`. */
+export function dayNumber(date: Date, timeZone: string): number {
+  const w = wallTime(date, timeZone);
+  return Date.UTC(w.year, w.month - 1, w.day) / 86_400_000;
+}
+
+/** The `YYYY-MM-DD` string of a day number. */
+export function dayNumberToDate(day: number): string {
+  return new Date(day * 86_400_000).toISOString().slice(0, 10);
+}
+
 /** The calendar date (`YYYY-MM-DD`) that `date` falls on in `timeZone`. */
 export function dateKey(date: Date, timeZone: string): string {
   const w = wallTime(date, timeZone);

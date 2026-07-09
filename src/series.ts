@@ -1,5 +1,5 @@
 import { formatTime } from "./format.js";
-import { wallTime } from "./tz.js";
+import { dayNumber, wallTime } from "./tz.js";
 import type { ResolvedEvent } from "./types.js";
 
 /** A recurring series collapsed to one description. */
@@ -75,12 +75,6 @@ function cadenceOf(events: ResolvedEvent[], timeZone: string): string {
     return `every ${gap} days`;
   }
   return fallback;
-}
-
-/** Days since the epoch of the calendar date `date` falls on in `timeZone`. */
-function dayNumber(date: Date, timeZone: string): number {
-  const w = wallTime(date, timeZone);
-  return Date.UTC(w.year, w.month - 1, w.day) / 86_400_000;
 }
 
 function sharedTime(events: ResolvedEvent[], timeZone: string): string | undefined {

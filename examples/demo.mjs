@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import {
   binEvents,
   calendarDigest,
+  shapeDigest,
   textDigest,
   tieredWindow,
   timelineDigest,
@@ -66,6 +67,16 @@ for (const day of calendarDigest(events, { ...options, days: 14 }).days) {
   const names = day.events.map((e) => e.source.name).join(", ");
   console.log(`  ${day.date} ${"SMTWTFS"[day.weekday]} ${day.events.length ? `(${day.events.length}) ${names}` : ""}`);
 }
+
+console.log("\n— shapeDigest (90 days; recurring series as background) —");
+const shape = shapeDigest(events, { ...options, days: 90 });
+console.log(`  next: ${shape.nextEvent?.source.name ?? "nothing"} | leading quiet: ${shape.leadingQuietDays} day(s)`);
+for (const c of shape.clusters) {
+  const names = [...new Set(c.events.map((e) => e.source.name))].slice(0, 3).join(", ");
+  console.log(`  cluster ${c.startDate} → ${c.endDate}: ${c.count} over ${c.days}d (intensity ${c.intensity.toFixed(1)}) — ${names}`);
+}
+for (const q of shape.quietStretches) console.log(`  quiet   ${q.startDate} → ${q.endDate} (${q.days}d)`);
+for (const s of shape.background) console.log(`  background: ${s.name} (${s.cadence})`);
 
 console.log("\n— drill-down: events behind the first tiered sentence —");
 const digest = textDigest(events, options);

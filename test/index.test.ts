@@ -3,6 +3,7 @@ import {
   binEvents,
   calendarDigest,
   resolveEvents,
+  shapeDigest,
   summarizeSeries,
   textDigest,
   tieredWindow,
@@ -240,6 +241,75 @@ describe("timelineDigest", () => {
     expect(digest.granularity).toBe("week");
     expect(digest.buckets).toHaveLength(13);
     expect(digest.buckets[0]!.label).toBe("Jul 9 – Jul 15");
+  });
+});
+
+describe("shapeDigest", () => {
+  it("detects a quiet week followed by a burst", () => {
+    const events = [
+      ev("Dentist", "2026-07-16T15:00:00Z"),
+      ev("Recital", "2026-07-17T22:00:00Z"),
+      ev("Hike", "2026-07-18T14:00:00Z"),
+    ];
+    const shape = shapeDigest(events, NY);
+    expect(shape.leadingQuietDays).toBe(7);
+    expect(shape.nextEvent!.source.name).toBe("Dentist");
+    expect(shape.clusters).toHaveLength(1);
+    expect(shape.clusters[0]).toMatchObject({
+      startDate: "2026-07-16",
+      endDate: "2026-07-18",
+      days: 3,
+      count: 3,
+      intensity: 1,
+    });
+    // Leading quiet week, then nothing after the burst until the horizon.
+    expect(shape.quietStretches).toEqual([
+      { startDate: "2026-07-09", endDate: "2026-07-15", days: 7 },
+      { startDate: "2026-07-19", endDate: "2026-10-06", days: 80 },
+    ]);
+  });
+
+  it("splits clusters on gaps of minQuietDays and merges below it", () => {
+    const events = [
+      ev("A", "2026-07-10T15:00:00Z"),
+      ev("B", "2026-07-11T15:00:00Z"),
+      ev("C", "2026-07-14T15:00:00Z"), // 2 empty days before this
+    ];
+    const split = shapeDigest(events, NY);
+    expect(split.clusters.map((c) => c.startDate)).toEqual(["2026-07-10", "2026-07-14"]);
+
+    const merged = shapeDigest(events, { ...NY, minQuietDays: 3 });
+    expect(merged.clusters).toHaveLength(1);
+    expect(merged.clusters[0]).toMatchObject({ days: 5, count: 3, intensity: 0.6 });
+  });
+
+  it("moves recurring series to background so they don't mask the shape", () => {
+    const events: CalendarEvent[] = [
+      ...Array.from({ length: 10 }, (_, i) =>
+        ev("Call mom", `2026-07-${10 + i}T17:00:00Z`, { seriesId: "mom" }),
+      ),
+      ev("Dentist", "2026-07-16T15:00:00Z"),
+    ];
+    const shape = shapeDigest(events, NY);
+    expect(shape.leadingQuietDays).toBe(7);
+    expect(shape.clusters).toHaveLength(1);
+    expect(shape.clusters[0]!.count).toBe(1);
+    expect(shape.background.map((s) => s.name)).toEqual(["Call mom"]);
+
+    const withSeries = shapeDigest(events, { ...NY, includeSeries: true });
+    expect(withSeries.leadingQuietDays).toBe(1);
+    expect(withSeries.clusters[0]!.count).toBe(11);
+    expect(withSeries.background).toHaveLength(0);
+  });
+
+  it("describes an empty horizon and ignores events beyond it", () => {
+    const shape = shapeDigest([ev("Far away", "2026-11-01T12:00:00Z")], { ...NY, days: 90 });
+    expect(shape.clusters).toHaveLength(0);
+    expect(shape.nextEvent).toBeUndefined();
+    expect(shape.leadingQuietDays).toBe(90);
+    expect(shape.quietStretches).toEqual([
+      { startDate: "2026-07-09", endDate: "2026-10-06", days: 90 },
+    ]);
   });
 });
 

@@ -6,6 +6,8 @@ export type { Tier, TierResult, TieredWindow, TieredWindowOptions } from "./tier
 export { tieredWindow, DEFAULT_TIERS } from "./tiers.js";
 export type { SeriesSummary, SeriesBreakdown } from "./series.js";
 export { summarizeSeries } from "./series.js";
+export type { ShapeDigest, ShapeDigestOptions, EventCluster, QuietStretch } from "./shape.js";
+export { shapeDigest } from "./shape.js";
 export type { TextDigest, TextDigestOptions, Sentence } from "./text.js";
 export { textDigest } from "./text.js";
 export type {
