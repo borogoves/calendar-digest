@@ -22,6 +22,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "explore": "npm run build --silent && node examples/fixtures/run.mjs",
+    "live": "npm run build --silent && node examples/live/harness.mjs",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "engines": {
