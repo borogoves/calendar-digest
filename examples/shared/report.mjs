@@ -41,8 +41,9 @@ export function printReport(events, options) {
     console.log(`  ${b.label.padEnd(16)} ${bar} ${b.count || ""}`);
   }
 
-  console.log("\n— next 14 days —");
-  for (const day of calendarDigest(events, { ...options, days: 14 }).days) {
+  const calendarDays = Math.min(options.days ?? 90, 14);
+  console.log(`\n— next ${calendarDays} day${calendarDays === 1 ? "" : "s"} —`);
+  for (const day of calendarDigest(events, { ...options, days: calendarDays }).days) {
     const names = day.events.map((e) => e.source.name).join(", ");
     console.log(`  ${day.date} ${"SMTWTFS"[day.weekday]} ${day.events.length ? `(${day.events.length}) ${names}` : ""}`);
   }
