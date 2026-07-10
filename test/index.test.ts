@@ -259,14 +259,33 @@ describe("summarizeSeries", () => {
     expect(series[0]!.time).toBe("1:00 PM");
   });
 
-  it("detects weekly and monthly cadences", () => {
+  it("names the weekday for weekly and biweekly series", () => {
+    // Jul 10, 17, 24 2026 are Fridays.
     const weekly = resolve(
       ["2026-07-10", "2026-07-17", "2026-07-24"].map((d) =>
         ev("Zoom", `${d}T15:00:00Z`, { seriesId: "zoom" }),
       ),
     );
-    expect(summarizeSeries(weekly, TZ).series[0]!.cadence).toBe("weekly");
+    expect(summarizeSeries(weekly, TZ).series[0]!.cadence).toBe("Fridays");
 
+    const biweekly = resolve(
+      ["2026-07-13", "2026-07-27", "2026-08-10"].map((d) => // Mondays, 2 weeks apart
+        ev("1:1", `${d}T14:00:00Z`, { seriesId: "oneonone" }),
+      ),
+    );
+    expect(summarizeSeries(biweekly, TZ).series[0]!.cadence).toBe("every other Monday");
+  });
+
+  it("detects the every-weekday pattern instead of a bare count", () => {
+    const weekdays = resolve(
+      [13, 14, 15, 16, 17, 20, 21, 22, 23, 24].map((d) => // Mon–Fri, two weeks
+        ev("Standup", `2026-07-${d}T14:00:00Z`, { seriesId: "standup" }),
+      ),
+    );
+    expect(summarizeSeries(weekdays, TZ).series[0]!.cadence).toBe("every weekday");
+  });
+
+  it("detects monthly cadence", () => {
     const monthly = resolve(
       ["2026-07-15", "2026-08-15", "2026-09-15"].map((d) =>
         ev("Rent", `${d}T12:00:00Z`, { seriesId: "rent" }),

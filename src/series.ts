@@ -1,12 +1,26 @@
 import { formatTime } from "./format.js";
-import { dayNumber, wallTime } from "./tz.js";
+import { dayNumber, wallTime, weekdayOf } from "./tz.js";
 import type { ResolvedEvent } from "./types.js";
+
+const WEEKDAY_NAMES = [
+  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+];
+
+/** The weekday an event falls on in a zone, 0 = Sunday. */
+function weekdayIndex(event: ResolvedEvent, timeZone: string): number {
+  const w = wallTime(event.start, timeZone);
+  return weekdayOf(w.year, w.month, w.day);
+}
 
 /** A recurring series collapsed to one description. */
 export interface SeriesSummary {
   seriesId: string;
   name: string;
-  /** "daily", "weekly", "every 2 weeks", "every N days", "monthly", or "N×". */
+  /**
+   * A human phrase for the rhythm: "daily", "Mondays", "every other
+   * Monday", "every weekday", "every N days", "monthly", or "N×" when no
+   * regular pattern fits.
+   */
   cadence: string;
   /** Wall-clock time shared by every instance, if consistent (e.g. "4:00 PM"). */
   time?: string;
@@ -66,15 +80,42 @@ function cadenceOf(events: ResolvedEvent[], timeZone: string): string {
   if (days.length < 2) return fallback;
   const gaps = new Set<number>();
   for (let i = 1; i < days.length; i++) gaps.add(days[i]! - days[i - 1]!);
+
   if ([...gaps].every((g) => g >= 28 && g <= 31)) return "monthly";
   if (gaps.size === 1) {
     const gap = [...gaps][0]!;
     if (gap === 1) return "daily";
-    if (gap === 7) return "weekly";
-    if (gap === 14) return "every 2 weeks";
+    // A weekly (or biweekly) series always lands on the same weekday, and
+    // that's the fact a reader actually wants — "Mondays" tells you when,
+    // "weekly" doesn't. Name the day rather than the interval.
+    const weekday = WEEKDAY_NAMES[weekdayIndex(events[0]!, timeZone)]!;
+    if (gap === 7) return `${weekday}s`;
+    if (gap === 14) return `every other ${weekday}`;
     return `every ${gap} days`;
   }
+  if (isEveryWeekday(events, days, gaps, timeZone)) return "every weekday";
   return fallback;
+}
+
+/**
+ * True when the series lands on every business day — the Mon–Fri run whose
+ * gaps alternate 1 (within a week) and 3 (Fri→Mon). Common for standups and
+ * work shifts, and otherwise lost to the bare-count fallback.
+ */
+function isEveryWeekday(
+  events: ResolvedEvent[],
+  days: number[],
+  gaps: Set<number>,
+  timeZone: string,
+): boolean {
+  if (![...gaps].every((g) => g === 1 || g === 3)) return false;
+  const weekdays = new Set(events.map((e) => weekdayIndex(e, timeZone)));
+  if ([...weekdays].some((d) => d === 0 || d === 6)) return false; // no weekends
+  // Require the covered weekdays to be a contiguous run (Mon–Fri, Mon–Thu,
+  // …) so a sparse Thu/Fri/Mon pattern isn't mislabeled.
+  const sorted = [...weekdays].sort((a, b) => a - b);
+  const contiguous = sorted.every((d, i) => i === 0 || d === sorted[i - 1]! + 1);
+  return contiguous && weekdays.size >= 4;
 }
 
 function sharedTime(events: ResolvedEvent[], timeZone: string): string | undefined {
