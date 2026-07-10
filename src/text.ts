@@ -1,7 +1,9 @@
 import type { CalendarEvent, ResolvedEvent } from "./types.js";
 import type { BinName } from "./bins.js";
 import { binEvents } from "./bins.js";
+import { resolveOptions } from "./events.js";
 import { describeEvent } from "./format.js";
+import type { SpecificityOptions } from "./format.js";
 import type { PriorityOptions } from "./priority.js";
 import { eventPriority } from "./priority.js";
 import type { SeriesSummary } from "./series.js";
@@ -9,7 +11,7 @@ import { summarizeSeries } from "./series.js";
 import type { TieredWindowOptions } from "./tiers.js";
 import { tieredWindow } from "./tiers.js";
 
-export interface TextDigestOptions extends TieredWindowOptions, PriorityOptions {
+export interface TextDigestOptions extends TieredWindowOptions, PriorityOptions, SpecificityOptions {
   /** Hard cap on sentences (the "space budget"). Default 3. */
   maxSentences?: number;
   /**
@@ -44,6 +46,7 @@ export function textDigest(events: CalendarEvent[], options?: TextDigestOptions)
   const maxSentences = options?.maxSentences ?? 3;
   const maxNamed = options?.maxNamed ?? 3;
   const timeZone = options?.timeZone ?? "UTC";
+  const now = resolveOptions(options).now;
 
   interface Group {
     phrase: string;
@@ -85,14 +88,18 @@ export function textDigest(events: CalendarEvent[], options?: TextDigestOptions)
     sentences.push({
       text: groupSentence(
         group.events, group.phrase, group.more, group.spansDays,
-        timeZone, maxNamed, options?.tagPriorities,
+        timeZone, now, maxNamed, options,
       ),
       events: group.events,
     });
   }
 
   if (sentences.length === 0) return { text: "No upcoming events.", sentences: [] };
-  return { text: sentences.map((s) => s.text).join(" "), sentences };
+  const body = sentences.map((s) => s.text).join(" ");
+  // State the relative-time convention once, rather than repeating "from
+  // now" on every event.
+  const text = options?.mode === "relative" ? `Times below are relative to now. ${body}` : body;
+  return { text, sentences };
 }
 
 /**
@@ -106,12 +113,14 @@ function groupSentence(
   more: boolean,
   includeDate: boolean,
   timeZone: string,
+  now: Date,
   maxNamed: number,
-  tagPriorities?: Record<string, number>,
+  options?: TextDigestOptions,
 ): string {
   const count = events.length;
   const noun = count === 1 ? "event" : "events";
   const countPhrase = more ? `${count} more ${noun}` : `${count} ${noun}`;
+  const tagPriorities = options?.tagPriorities;
 
   const { oneOffs, series } = summarizeSeries(events, timeZone);
   // Name the weightiest events first; ties stay chronological.
@@ -127,7 +136,14 @@ function groupSentence(
   const overflow = count - covered;
 
   const items = [
-    ...namedOneOffs.map((e) => describeEvent(e, timeZone, includeDate)),
+    ...namedOneOffs.map((e) =>
+      describeEvent(e, timeZone, now, includeDate, {
+        ...(options?.dateBoundaryDays !== undefined ? { dateBoundaryDays: options.dateBoundaryDays } : {}),
+        ...(options?.vagueBoundaryDays !== undefined ? { vagueBoundaryDays: options.vagueBoundaryDays } : {}),
+        ...(options?.mode !== undefined ? { mode: options.mode } : {}),
+        forceSpecific: eventPriority(e, tagPriorities) > 0,
+      }),
+    ),
     ...namedSeries.map((s) => describeSeries(s)),
   ];
   if (overflow > 0) items.push(`${overflow} more`);

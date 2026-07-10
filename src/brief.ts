@@ -1,5 +1,6 @@
 import { resolveOptions } from "./events.js";
-import { formatMonthDay, formatTime } from "./format.js";
+import { formatMonthDay, formatTime, relativeDuration, vaguePeriod, vaguePeriodShort } from "./format.js";
+import type { SpecificityOptions } from "./format.js";
 import type { PriorityOptions } from "./priority.js";
 import { eventPriority } from "./priority.js";
 import type { ShapeDigestOptions } from "./shape.js";
@@ -18,7 +19,7 @@ const PRESETS: Record<BriefPreset, number> = {
   display: 300,
 };
 
-export interface BriefDigestOptions extends ShapeDigestOptions, PriorityOptions {
+export interface BriefDigestOptions extends ShapeDigestOptions, PriorityOptions, SpecificityOptions {
   /** Character budget, or a surface preset. Default "widget" (140). */
   budget?: number | BriefPreset;
   /** Clusters with at least this many events narrate as a stretch. Default 3. */
@@ -105,21 +106,56 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     const mins = Math.round((e.start.getTime() - opts.now.getTime()) / 60_000);
     return mins >= 0 && mins < 90 ? mins : undefined;
   };
+  const dateBoundaryDays = options?.dateBoundaryDays ?? 7;
+  const vagueBoundaryDays = options?.vagueBoundaryDays ?? 30;
+  const mode = options?.mode ?? "calendar";
+  const priorityOf = (e: ResolvedEvent): number => eventPriority(e, options?.tagPriorities);
+  // Relative mode never names a date — it always describes a duration
+  // from now instead ("in 2 hours", "in 5 weeks", "in 3 months").
+  const relativeGap = (day: number, forceSpecific: boolean): string => {
+    const delta = day - todayDay;
+    if (delta <= 0) return "today";
+    if (delta === 1) return "tomorrow";
+    return `in ${relativeDuration(delta * 86_400_000, dateBoundaryDays, vagueBoundaryDays, forceSpecific)}`;
+  };
+  // Priority-flagged events skip the coarsening below: flagging something
+  // as important is itself a signal its exact timing still matters, no
+  // matter how far out it is.
   const whenShort = (e: ResolvedEvent): string => {
     const mins = imminentMinutes(e);
     if (mins !== undefined) return `in ${mins} min`;
-    const label = dayLabel(dayNumber(e.start, tz));
-    return e.allDay ? label : `${label} ${formatTime(e.start, tz).replace(":00 ", " ")}`;
+    const forceSpecific = priorityOf(e) > 0;
+    const day = dayNumber(e.start, tz);
+    const delta = day - todayDay;
+    if (mode === "relative") {
+      if (e.allDay) return relativeGap(day, forceSpecific);
+      return `in ${relativeDuration(e.start.getTime() - opts.now.getTime(), dateBoundaryDays, vagueBoundaryDays, forceSpecific)}`;
+    }
+    if (!forceSpecific && delta >= vagueBoundaryDays) {
+      return vaguePeriodShort(dateOfDay(day), "UTC", dateOfDay(todayDay));
+    }
+    const label = dayLabel(day);
+    if (e.allDay || (!forceSpecific && delta >= dateBoundaryDays)) return label;
+    return `${label} ${formatTime(e.start, tz).replace(":00 ", " ")}`;
   };
   const whenLong = (e: ResolvedEvent): string => {
     const mins = imminentMinutes(e);
     if (mins !== undefined) return `in ${mins} min`;
+    const forceSpecific = priorityOf(e) > 0;
     const day = dayNumber(e.start, tz);
+    const delta = day - todayDay;
+    if (mode === "relative") {
+      if (e.allDay) return relativeGap(day, forceSpecific);
+      return `in ${relativeDuration(e.start.getTime() - opts.now.getTime(), dateBoundaryDays, vagueBoundaryDays, forceSpecific)}`;
+    }
+    if (!forceSpecific && delta >= vagueBoundaryDays) {
+      return `in ${vaguePeriod(dateOfDay(day), "UTC", dateOfDay(todayDay))}`;
+    }
     const label = dayLabel(day);
-    const prefix = day - todayDay <= 1 ? label : `on ${label}`;
-    return e.allDay ? prefix : `${prefix} at ${formatTime(e.start, tz)}`;
+    const prefix = delta <= 1 ? label : `on ${label}`;
+    if (e.allDay || (!forceSpecific && delta >= dateBoundaryDays)) return prefix;
+    return `${prefix} at ${formatTime(e.start, tz)}`;
   };
-  const priorityOf = (e: ResolvedEvent): number => eventPriority(e, options?.tagPriorities);
 
   // --- Candidates ---------------------------------------------------------
   const candidates: Candidate[] = [];
@@ -143,10 +179,11 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     }
   } else if (shape.leadingQuietDays >= 2) {
     const firstDay = dayNumber(shape.clusters[0]!.events[0]!.start, tz);
+    const gap = relativeGap(firstDay, false);
     candidates.push({
       kind: "quiet", rank: RANK.opening, index: index++,
-      prose: [`nothing until ${dayLabel(firstDay)}`],
-      compact: [`Quiet til ${dayLabel(firstDay)}`], events: [],
+      prose: [mode === "relative" ? `nothing ${gap}` : `nothing until ${dayLabel(firstDay)}`],
+      compact: [mode === "relative" ? `Quiet ${gap}` : `Quiet til ${dayLabel(firstDay)}`], events: [],
     });
   } else {
     const next = shape.nextEvent!;
@@ -160,12 +197,18 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
   }
   const openedWithNext = candidates[0]!.kind === "next";
 
-  const eventCandidate = (e: ResolvedEvent, rank: number): Candidate => ({
-    kind: "event", rank, index: index++,
-    prose: [`${e.source.name} ${whenLong(e)}`, `${e.source.name} ${whenShort(e)}`],
-    compact: [`${e.source.name} ${whenShort(e)}`, `${e.source.name} ${dayLabel(dayNumber(e.start, tz))}`],
-    events: [e],
-  });
+  const eventCandidate = (e: ResolvedEvent, rank: number): Candidate => {
+    const shortForm = whenShort(e);
+    // Relative mode's shortest fallback just drops the leading "in " —
+    // there's no shorter phrasing that's still recognizably relative.
+    const fallback = mode === "relative" ? shortForm.replace(/^in /, "") : dayLabel(dayNumber(e.start, tz));
+    return {
+      kind: "event", rank, index: index++,
+      prose: [`${e.source.name} ${whenLong(e)}`, `${e.source.name} ${shortForm}`],
+      compact: [`${e.source.name} ${shortForm}`, `${e.source.name} ${fallback}`],
+      events: [e],
+    };
+  };
 
   let named = 0;
   const brokeThrough = new Set<ResolvedEvent>();
@@ -232,8 +275,12 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     );
   const inserted = (list: Chosen[], entry: Chosen): Chosen[] =>
     [...list, entry].sort((a, b) => a.cand.index - b.cand.index);
+  // State the relative-time convention once, rather than repeating "from
+  // now" on every event; skipped on compact budgets, where it would eat
+  // too much of the little space available.
+  const relativePreamble = !compact && mode === "relative" ? "Times relative to now — " : "";
   // Prose reserves one character for the closing period.
-  const effective = compact ? budget : budget - 1;
+  const effective = (compact ? budget : budget - 1) - relativePreamble.length;
 
   let chosen: Chosen[] = [];
   const packOrder = [...candidates].sort((a, b) => a.rank - b.rank || a.index - b.index);
@@ -241,8 +288,14 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     const variants = compact ? cand.compact : cand.prose;
     let picked = variants.find((v) => assemblyLength(inserted(chosen, { cand, text: v })) <= effective);
     // The opening always renders, even over a tiny budget — a summary that
-    // says nothing is worse than one that runs a little long.
-    if (picked === undefined && chosen.length === 0) picked = variants[variants.length - 1]!;
+    // says nothing is worse than one that runs a little long. Break-through
+    // (priority) candidates get the same guarantee: it's the whole point
+    // of flagging one, and the later eviction pass already protects them
+    // once chosen, so failing to seat them here in the first place would
+    // silently defeat that protection.
+    if (picked === undefined && (chosen.length === 0 || cand.rank <= RANK.breakThrough)) {
+      picked = variants[variants.length - 1]!;
+    }
     if (picked !== undefined) chosen = inserted(chosen, { cand, text: picked });
   }
 
@@ -259,7 +312,10 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     if (n <= 0) break;
     const more: Candidate = {
       kind: "more", rank: RANK.more, index: Number.MAX_SAFE_INTEGER,
-      prose: [`${n} more by ${horizonEndLabel}`, `${n} more`],
+      prose: [
+        mode === "relative" ? `${n} more in the next ${horizonDays} days` : `${n} more by ${horizonEndLabel}`,
+        `${n} more`,
+      ],
       compact: [`+${n}`], events: [],
     };
     const variants = compact ? more.compact : more.prose;
@@ -313,6 +369,7 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     text = text.charAt(0).toUpperCase() + text.slice(1);
     if (!text.endsWith(".")) text += ".";
   }
+  text = relativePreamble + text;
   return {
     text,
     fragments: chosen.map((c) => ({ kind: c.cand.kind, text: c.text, events: c.cand.events })),

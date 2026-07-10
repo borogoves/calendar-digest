@@ -23,4 +23,5 @@ export type {
 export { timelineDigest } from "./timeline.js";
 export type { CalendarDigest, CalendarDigestOptions, CalendarDay } from "./calendar.js";
 export { calendarDigest } from "./calendar.js";
-export { describeEvent, formatTime, formatDay } from "./format.js";
+export type { SpecificityOptions } from "./format.js";
+export { describeEvent, formatTime, formatDay, relativeDuration, vaguePeriod, vaguePeriodShort } from "./format.js";

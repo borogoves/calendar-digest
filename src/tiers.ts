@@ -32,6 +32,13 @@ export const DEFAULT_TIERS: Tier[] = [
 
 export interface TieredWindowOptions extends DigestOptions {
   tiers?: Tier[];
+  /**
+   * Hard cap, in days from now, on the whole window — events beyond it are
+   * excluded entirely (not counted anywhere, including `beyond`). Tiers
+   * that reach past the cap are clipped to it; tiers already within it are
+   * untouched. Unset by default: the tiers themselves define the horizon.
+   */
+  days?: number;
 }
 
 /**
@@ -41,9 +48,17 @@ export interface TieredWindowOptions extends DigestOptions {
  */
 export function tieredWindow(events: CalendarEvent[], options?: TieredWindowOptions): TieredWindow {
   const opts = resolveOptions(options);
-  const tiers = [...(options?.tiers ?? DEFAULT_TIERS)].sort((a, b) => a.days - b.days);
+  let tiers = [...(options?.tiers ?? DEFAULT_TIERS)].sort((a, b) => a.days - b.days);
+  const cap = options?.days;
+  if (cap !== undefined) {
+    tiers = tiers.filter((t) => t.days <= cap);
+    const lastDays = tiers.length > 0 ? tiers[tiers.length - 1]!.days : 0;
+    if (lastDays < cap) tiers.push({ days: cap });
+  }
   const upcoming = resolveEvents(events, opts.timeZone).filter(
-    (e) => e.start.getTime() >= opts.now.getTime(),
+    (e) =>
+      e.start.getTime() >= opts.now.getTime() &&
+      (cap === undefined || e.start.getTime() < addDays(opts.now, cap, opts.timeZone).getTime()),
   );
 
   const results: TierResult[] = [];

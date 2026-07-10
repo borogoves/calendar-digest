@@ -100,6 +100,17 @@ describe("tieredWindow", () => {
     expect(window.tiers[1]!.label).toBe("the next 400 days");
     expect(window.beyond.count).toBe(0);
   });
+
+  it("caps the whole window at 'days', excluding anything beyond it entirely", () => {
+    // Default tiers are 7/30/365; a 10-day cap should clip the 30-day tier
+    // down to 10 and drop the 365-day tier and "beyond" altogether.
+    const window = tieredWindow(events, { ...NY, days: 10 });
+    expect(window.tiers).toHaveLength(2);
+    expect(window.tiers[0]).toMatchObject({ label: "the next 7 days", count: 1 });
+    expect(window.tiers[1]!.end.getTime() - window.tiers[1]!.start.getTime()).toBe(3 * 86_400_000);
+    expect(window.tiers.reduce((n, t) => n + t.count, 0)).toBe(1); // just "Soon" (+3 days)
+    expect(window.beyond.count).toBe(0);
+  });
 });
 
 describe("textDigest", () => {
@@ -150,6 +161,84 @@ describe("textDigest", () => {
 
   it("handles an empty list", () => {
     expect(textDigest([], NY).text).toBe("No upcoming events.");
+  });
+});
+
+describe("textDigest specificity gradient", () => {
+  // Anchor is Thu, Jul 9. Near (<7d): full date+time. Mid (7-30d): date
+  // only. Far (30d+): a vague period.
+  const events = [
+    ev("Dentist", "2026-07-14T15:00:00Z"), // +5 days: near
+    ev("Car service", "2026-07-25T14:00:00Z"), // +16 days: mid
+    ev("Flight to Tokyo", "2026-08-30T13:00:00Z"), // +52 days: far
+  ];
+
+  it("shows full date+time near, date-only mid-range, and a vague period far out", () => {
+    const digest = textDigest(events, { ...NY, maxNamed: 3 });
+    const sentence = digest.sentences.map((s) => s.text).join(" ");
+    expect(sentence).toContain("Dentist on Tue, Jul 14 at 11:00 AM");
+    expect(sentence).toContain("Car service on Sat, Jul 25");
+    expect(sentence).not.toContain("Car service on Sat, Jul 25 at");
+    expect(sentence).toContain("Flight to Tokyo in late August");
+  });
+
+  it("lets the developer move the boundaries", () => {
+    const digest = textDigest(events, { ...NY, maxNamed: 3, dateBoundaryDays: 20, vagueBoundaryDays: 60 });
+    const sentence = digest.sentences.map((s) => s.text).join(" ");
+    // Car service (+16d) now falls under the wider near-boundary (20d).
+    expect(sentence).toContain("Car service on Sat, Jul 25 at 10:00 AM");
+    // Flight (+52d) now falls under the mid tier since the vague boundary moved to 60d.
+    expect(sentence).toContain("Flight to Tokyo on Sun, Aug 30");
+    expect(sentence).not.toContain("Flight to Tokyo on Sun, Aug 30 at");
+  });
+
+  it("lets a priority-flagged far event bypass the vague coarsening", () => {
+    const flagged = [...events.slice(0, 2), ev("Flight to Tokyo", "2026-08-30T13:00:00Z", { priority: 1 })];
+    const digest = textDigest(flagged, { ...NY, maxNamed: 3 });
+    expect(digest.sentences.map((s) => s.text).join(" ")).toContain(
+      "Flight to Tokyo on Sun, Aug 30 at 9:00 AM",
+    );
+  });
+});
+
+describe("relative mode", () => {
+  const events = [
+    ev("Call mom", "2026-07-09T18:00:00Z"), // +2 hours
+    ev("Dentist", "2026-07-25T14:00:00Z"), // +16 days -> ~2 weeks
+    ev("Flight to Seoul", "2026-10-01T13:00:00Z"), // +84 days -> ~3 months
+  ];
+
+  it("textDigest describes events as durations from now, with a one-time preamble", () => {
+    const digest = textDigest(events, { ...NY, mode: "relative", maxNamed: 3 });
+    expect(digest.text.startsWith("Times below are relative to now. ")).toBe(true);
+    expect(digest.text).toContain("Call mom in 2 hours");
+    expect(digest.text).toContain("Dentist in 2 weeks");
+    expect(digest.text).toContain("Flight to Seoul in 3 months");
+    // Individual sentences don't repeat the "relative to now" framing.
+    expect(digest.sentences.every((s) => !s.text.includes("relative"))).toBe(true);
+  });
+
+  it("briefDigest uses relative durations too, with the preamble only on prose budgets", () => {
+    const display = briefDigest(events, { ...NY, mode: "relative", budget: "display" });
+    expect(display.text.startsWith("Times relative to now — ")).toBe(true);
+    expect(display.text).toContain("in 2 hours");
+    expect(display.text).toContain("in 2 weeks");
+    expect(display.text).toContain("in 3 months");
+
+    const watch = briefDigest(events, { ...NY, mode: "relative", budget: "watch" });
+    expect(watch.text.startsWith("Times relative")).toBe(false);
+    expect(watch.text.length).toBeLessThanOrEqual(40);
+  });
+
+  it("gives priority-flagged events an exact day count instead of a rounded unit", () => {
+    const flagged = [ev("Flight to Seoul", "2026-10-01T13:00:00Z", { priority: 1 })];
+    const digest = textDigest(flagged, { ...NY, mode: "relative" });
+    expect(digest.text).toContain("Flight to Seoul in 84 days");
+  });
+
+  it("uses today/tomorrow for near all-day events instead of '0 days'", () => {
+    const digest = textDigest([ev("Field trip", "2026-07-10")], { ...NY, mode: "relative", bins: ["tomorrow"] });
+    expect(digest.text).toContain("Field trip tomorrow");
   });
 });
 
@@ -371,8 +460,10 @@ describe("briefDigest", () => {
       ev("dentist", "2026-07-16T15:00:00Z"),
     ];
     const display = briefDigest(events, { ...NY, budget: "display" });
+    // Dentist is exactly 7 days out (the date-boundary threshold), so it
+    // now correctly shows a date only, no time.
     expect(display.text).toBe(
-      "Nothing until Jul 16, then dentist on Jul 16 at 11:00 AM, plus Call mom (daily at 1:00 PM).",
+      "Nothing until Jul 16, then dentist on Jul 16, plus Call mom (daily at 1:00 PM).",
     );
     const watch = briefDigest(events, { ...NY, budget: "watch" });
     expect(watch.text.length).toBeLessThanOrEqual(40);
@@ -444,6 +535,19 @@ describe("briefDigest with priorities", () => {
     expect(brief.text.length).toBeLessThanOrEqual(40);
     expect(brief.text).toContain("Flight to Tokyo");
     expect(brief.text).not.toMatch(/\+\d+$/);
+  });
+
+  it("seats a break-through event even when nothing fits, rather than dropping it silently", () => {
+    // A long name in relative mode leaves no variant short enough to
+    // satisfy the watch budget at all — the flight must still appear,
+    // even at the cost of a character or two of overflow.
+    const events = [
+      ev("Dinner with Sam", "2026-07-15T23:00:00Z"),
+      ev("Flight to Tokyo", "2026-08-30T13:00:00Z", { priority: 2 }),
+    ];
+    const brief = briefDigest(events, { ...NY, budget: "watch", mode: "relative" });
+    expect(brief.text).toContain("Flight to Tokyo");
+    expect(brief.text.length).toBeLessThanOrEqual(45); // small, documented overflow — never silent omission
   });
 
   it("keeps chronological display order when everything fits", () => {

@@ -2,8 +2,8 @@
 // or setup required.
 //
 // Interactive:   node examples/fixtures/run.mjs
-// Non-interactive (for scripting/repeats): node examples/fixtures/run.mjs <dataset> [dayOffset] [days]
-//   e.g. node examples/fixtures/run.mjs quiet-then-burst 6 30
+// Non-interactive (for scripting/repeats): node examples/fixtures/run.mjs <dataset> [dayOffset] [days] [mode]
+//   e.g. node examples/fixtures/run.mjs quiet-then-burst 6 30 relative
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process, { stdin, stdout } from "node:process";
@@ -27,19 +27,19 @@ async function loadDataset(idOrIndex) {
   return { id, ...raw };
 }
 
-function runOne(dataset, dayOffset, days) {
+function runOne(dataset, dayOffset, days, mode) {
   const anchor = new Date(dataset.anchor);
   const now = new Date(anchor.getTime() + dayOffset * 86_400_000);
   console.log(`${dataset.id} — ${dataset.description}`);
-  console.log(`(anchor "now": ${anchor.toISOString()} in ${dataset.timeZone}; using now = ${now.toISOString()})\n`);
-  printReport(dataset.events, { now, timeZone: dataset.timeZone, days });
+  console.log(`(anchor "now": ${anchor.toISOString()} in ${dataset.timeZone}; using now = ${now.toISOString()}; mode = ${mode})\n`);
+  printReport(dataset.events, { now, timeZone: dataset.timeZone, days, mode });
 }
 
-const [argDataset, argOffset, argDays] = process.argv.slice(2);
+const [argDataset, argOffset, argDays, argMode] = process.argv.slice(2);
 
 if (argDataset) {
   const dataset = await loadDataset(argDataset);
-  runOne(dataset, Number(argOffset ?? 0), Number(argDays ?? 90));
+  runOne(dataset, Number(argOffset ?? 0), Number(argDays ?? 90), argMode ?? "calendar");
   process.exit(0);
 }
 
@@ -58,8 +58,9 @@ while (again) {
   const dataset = await loadDataset(pick);
   const dayOffset = Number(await ask("Start how many days from the anchor (negative goes earlier)", "0"));
   const days = Number(await ask("How many days ahead to look", "90"));
+  const mode = await ask("Mode (calendar/relative)", "calendar");
   console.log();
-  runOne(dataset, dayOffset, days);
+  runOne(dataset, dayOffset, days, mode);
   const cont = await ask("\nTry another? (y/n)", "y");
   again = (cont ?? "").toLowerCase().startsWith("y");
 }
