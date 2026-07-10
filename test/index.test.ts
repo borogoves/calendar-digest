@@ -429,6 +429,23 @@ describe("briefDigest with priorities", () => {
     expect(brief.text).toBe("Quiet til Tue · flight Aug 30 9 AM · +6");
   });
 
+  it("never evicts a break-through event to make room for the '+N' count", () => {
+    // A long event name plus several other scattered events leaves no
+    // room for both the break-through flight and a "+N" tail at watch
+    // size — the count must give way, not the flight.
+    const events = [
+      ev("Dinner with Sam", "2026-07-15T23:00:00Z"),
+      ev("Car service", "2026-07-25T14:00:00Z"),
+      ev("Book club", "2026-08-05T23:00:00Z"),
+      ev("Flight to Tokyo", "2026-08-30T13:00:00Z", { priority: 2 }),
+      ev("Haircut", "2026-08-20T17:00:00Z"),
+    ];
+    const brief = briefDigest(events, { ...NY, budget: "watch" });
+    expect(brief.text.length).toBeLessThanOrEqual(40);
+    expect(brief.text).toContain("Flight to Tokyo");
+    expect(brief.text).not.toMatch(/\+\d+$/);
+  });
+
   it("keeps chronological display order when everything fits", () => {
     const brief = briefDigest([...burst, flight], { ...NY, budget: "display" });
     expect(brief.text).toBe(

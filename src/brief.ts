@@ -268,7 +268,10 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
       chosen = inserted(chosen, { cand: more, text: picked });
       break;
     }
-    const victims = chosen.filter((c) => c.cand.rank > RANK.opening);
+    // Break-through fragments are protected, same as the opening: a count
+    // is only useful if it doesn't cost us the event that mattered enough
+    // to break through in the first place.
+    const victims = chosen.filter((c) => c.cand.rank > RANK.breakThrough);
     if (victims.length > 0) {
       const victim = victims.reduce((worst, c) =>
         c.cand.rank > worst.cand.rank ||
@@ -295,7 +298,9 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
       chosen = chosen.filter((c) => c !== victim);
       continue;
     }
-    chosen = inserted(chosen, { cand: more, text: variants[variants.length - 1]! });
+    // Nothing left that can be sacrificed without undoing a protected
+    // fragment (the opening or a break-through event) — better to omit
+    // the count than to bump a priority event or blow the budget.
     break;
   }
 

@@ -1,0 +1,31 @@
+{
+  "description": "Nothing until next Tuesday, then 6 events across Tue–Thu. Try dayOffset 0 vs 6 to see the shape flip from 'quiet, then a burst' to being inside the burst.",
+  "anchor": "2026-07-09T16:00:00.000Z",
+  "timeZone": "America/New_York",
+  "events": [
+    {
+      "name": "Dentist",
+      "start": "2026-07-14T15:00:00.000Z"
+    },
+    {
+      "name": "Board meeting",
+      "start": "2026-07-14T18:00:00.000Z"
+    },
+    {
+      "name": "Recital",
+      "start": "2026-07-15T22:00:00.000Z"
+    },
+    {
+      "name": "Party",
+      "start": "2026-07-15T23:00:00.000Z"
+    },
+    {
+      "name": "Hike",
+      "start": "2026-07-16T14:00:00.000Z"
+    },
+    {
+      "name": "Brunch",
+      "start": "2026-07-16T15:00:00.000Z"
+    }
+  ]
+}
