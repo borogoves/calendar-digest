@@ -1,5 +1,5 @@
 {
-  "description": "No events anywhere in range — tests the empty-horizon copy ('No events in the next 90 days' / 'Free 90d').",
+  "description": "No deadlines in range — the digest still has to say something useful ('No events in the next 90 days' / 'Free 90d').",
   "anchor": "2026-07-09T16:00:00.000Z",
   "timeZone": "America/New_York",
   "events": []

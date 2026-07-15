@@ -1,94 +1,97 @@
 {
-  "description": "A 20-event, 5-day conference (Aug 3–7) surrounded by quiet stretches — tests burst narration and how hard the character budgets get squeezed.",
+  "description": "A 20-event release week (Aug 3–7) bracketed by quiet stretches, plus a design freeze and a retro. Tests burst narration and how hard the character budgets get squeezed.",
   "anchor": "2026-07-09T16:00:00.000Z",
   "timeZone": "America/New_York",
   "events": [
     {
-      "name": "Keynote (Day 1)",
+      "name": "Build cut (Day 1)",
       "start": "2026-08-03T13:00:00.000Z"
     },
     {
-      "name": "Workshop A (Day 1)",
+      "name": "QA regression pass (Day 1)",
       "start": "2026-08-03T15:00:00.000Z"
     },
     {
-      "name": "Workshop B (Day 1)",
+      "name": "Staging deploy (Day 1)",
       "start": "2026-08-03T18:00:00.000Z"
     },
     {
-      "name": "Sponsor demo (Day 1)",
+      "name": "Go/no-go checkpoint (Day 1)",
       "start": "2026-08-03T20:00:00.000Z"
     },
     {
-      "name": "Keynote (Day 2)",
+      "name": "Build cut (Day 2)",
       "start": "2026-08-04T13:00:00.000Z"
     },
     {
-      "name": "Workshop A (Day 2)",
+      "name": "QA regression pass (Day 2)",
       "start": "2026-08-04T15:00:00.000Z"
     },
     {
-      "name": "Workshop B (Day 2)",
+      "name": "Staging deploy (Day 2)",
       "start": "2026-08-04T18:00:00.000Z"
     },
     {
-      "name": "Sponsor demo (Day 2)",
+      "name": "Go/no-go checkpoint (Day 2)",
       "start": "2026-08-04T20:00:00.000Z"
     },
     {
-      "name": "Keynote (Day 3)",
+      "name": "Build cut (Day 3)",
       "start": "2026-08-05T13:00:00.000Z"
     },
     {
-      "name": "Workshop A (Day 3)",
+      "name": "QA regression pass (Day 3)",
       "start": "2026-08-05T15:00:00.000Z"
     },
     {
-      "name": "Workshop B (Day 3)",
+      "name": "Staging deploy (Day 3)",
       "start": "2026-08-05T18:00:00.000Z"
     },
     {
-      "name": "Sponsor demo (Day 3)",
+      "name": "Go/no-go checkpoint (Day 3)",
       "start": "2026-08-05T20:00:00.000Z"
     },
     {
-      "name": "Keynote (Day 4)",
+      "name": "Build cut (Day 4)",
       "start": "2026-08-06T13:00:00.000Z"
     },
     {
-      "name": "Workshop A (Day 4)",
+      "name": "QA regression pass (Day 4)",
       "start": "2026-08-06T15:00:00.000Z"
     },
     {
-      "name": "Workshop B (Day 4)",
+      "name": "Staging deploy (Day 4)",
       "start": "2026-08-06T18:00:00.000Z"
     },
     {
-      "name": "Sponsor demo (Day 4)",
+      "name": "Go/no-go checkpoint (Day 4)",
       "start": "2026-08-06T20:00:00.000Z"
     },
     {
-      "name": "Keynote (Day 5)",
+      "name": "Build cut (Day 5)",
       "start": "2026-08-07T13:00:00.000Z"
     },
     {
-      "name": "Workshop A (Day 5)",
+      "name": "QA regression pass (Day 5)",
       "start": "2026-08-07T15:00:00.000Z"
     },
     {
-      "name": "Workshop B (Day 5)",
+      "name": "Staging deploy (Day 5)",
       "start": "2026-08-07T18:00:00.000Z"
     },
     {
-      "name": "Sponsor demo (Day 5)",
+      "name": "Go/no-go checkpoint (Day 5)",
       "start": "2026-08-07T20:00:00.000Z"
     },
     {
-      "name": "Dentist",
-      "start": "2026-07-13T15:00:00.000Z"
+      "name": "Design freeze",
+      "start": "2026-07-13T15:00:00.000Z",
+      "tags": [
+        "milestone"
+      ]
     },
     {
-      "name": "Concert",
+      "name": "Post-launch retro",
       "start": "2026-09-10T23:00:00.000Z"
     }
   ]

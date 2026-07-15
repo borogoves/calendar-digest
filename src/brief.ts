@@ -66,6 +66,15 @@ interface Chosen {
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const RANK = { opening: 0, breakThrough: 1, normal: 2, series: 3, more: 9 } as const;
 
+/** Shorten to `max` characters, breaking at a word boundary where possible. */
+function clip(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max - 1);
+  const lastSpace = cut.lastIndexOf(" ");
+  const body = lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut.trimEnd();
+  return `${body}…`;
+}
+
 /**
  * A calendar summary packed into a fixed character budget. Fragments are
  * packed by priority (opening → break-through events → busy stretches and
@@ -202,10 +211,18 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     // Relative mode's shortest fallback just drops the leading "in " —
     // there's no shorter phrasing that's still recognizably relative.
     const fallback = mode === "relative" ? shortForm.replace(/^in /, "") : dayLabel(dayNumber(e.start, tz));
+    const name = e.source.name;
+    // Compact-only last resort before the fragment is dropped: keep the
+    // *when* intact and clip the name. On a watch, "Vendor API v1… Aug 30"
+    // beats both overrunning and saying nothing at all. Deliberately not
+    // offered in prose: at those budgets there's room to write properly, a
+    // clipped name just reads as broken, and the spoken preset would say
+    // the ellipsis out loud.
+    const clipped = clip(name, 16);
     return {
       kind: "event", rank, index: index++,
-      prose: [`${e.source.name} ${whenLong(e)}`, `${e.source.name} ${shortForm}`],
-      compact: [`${e.source.name} ${shortForm}`, `${e.source.name} ${fallback}`],
+      prose: [`${name} ${whenLong(e)}`, `${name} ${shortForm}`],
+      compact: [`${name} ${shortForm}`, `${name} ${fallback}`, `${clipped} ${fallback}`],
       events: [e],
     };
   };
@@ -290,15 +307,28 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
   for (const cand of packOrder) {
     const variants = compact ? cand.compact : cand.prose;
     let picked = variants.find((v) => assemblyLength(inserted(chosen, { cand, text: v })) <= effective);
-    // The opening always renders, even over a tiny budget — a summary that
-    // says nothing is worse than one that runs a little long. Break-through
-    // (priority) candidates get the same guarantee: it's the whole point
-    // of flagging one, and the later eviction pass already protects them
-    // once chosen, so failing to seat them here in the first place would
-    // silently defeat that protection.
-    if (picked === undefined && (chosen.length === 0 || cand.rank <= RANK.breakThrough)) {
-      picked = variants[variants.length - 1]!;
+    // The budget is a physical constraint — a watch face can't show 56
+    // characters, it clips them — so no fragment may overrun it. Priority
+    // buys first claim on the space, not permission to exceed it.
+    if (picked === undefined && cand.rank === RANK.breakThrough) {
+      // ...but a flagged event does outrank the opening. If the two can't
+      // coexist, the opening yields: it exists only to guarantee something
+      // renders, and a break-through satisfies that. "Vendor API sunset
+      // Aug 30" is worth more than "Quiet til Wed".
+      const withoutOpening = chosen.filter((c) => c.cand.rank !== RANK.opening);
+      if (withoutOpening.length !== chosen.length) {
+        const refit = variants.find(
+          (v) => assemblyLength(inserted(withoutOpening, { cand, text: v })) <= effective,
+        );
+        if (refit !== undefined) {
+          chosen = withoutOpening;
+          picked = refit;
+        }
+      }
     }
+    // Something must render: a summary that says nothing is worse than one
+    // that runs a little long.
+    if (picked === undefined && chosen.length === 0) picked = variants[variants.length - 1]!;
     if (picked !== undefined) chosen = inserted(chosen, { cand, text: picked });
   }
 

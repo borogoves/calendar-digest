@@ -1,0 +1,46 @@
+{
+  "description": "A treasury desk with nothing on the books until next Tuesday, then a funding cycle drops 6 tasks across Tue–Thu. Slide 'now' from 0 to 6 to watch the digest flip from 'quiet, then a crunch' to being inside it.",
+  "anchor": "2026-07-09T16:00:00.000Z",
+  "timeZone": "America/New_York",
+  "events": [
+    {
+      "name": "Pledge collateral — Meridian Mfg #4471",
+      "start": "2026-07-14T15:00:00.000Z",
+      "tags": [
+        "collateral"
+      ]
+    },
+    {
+      "name": "Borrowing base cert due — Northgate Retail",
+      "start": "2026-07-14T18:00:00.000Z",
+      "tags": [
+        "filing"
+      ]
+    },
+    {
+      "name": "Request overnight advance — FHLB",
+      "start": "2026-07-15T22:00:00.000Z",
+      "tags": [
+        "funding"
+      ]
+    },
+    {
+      "name": "Rate reset — Term Loan B",
+      "start": "2026-07-15T23:00:00.000Z",
+      "tags": [
+        "funding"
+      ]
+    },
+    {
+      "name": "Wire cutoff — Harbor Point closing",
+      "start": "2026-07-16T14:00:00.000Z",
+      "tags": [
+        "funding"
+      ]
+    },
+    {
+      "name": "Treasury committee review",
+      "start": "2026-07-16T15:00:00.000Z"
+    }
+  ]
+}

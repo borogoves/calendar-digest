@@ -423,8 +423,10 @@
   <header class="masthead">
     <h1 class="wordmark">calendar<em>-</em>digest</h1>
     <p class="thesis">
-      One calendar, four devices, one instant. Drag <strong>now</strong> through time and watch the same
-      events get re-summarized to fit each screen — the watch gets 40 characters, the smart display gets 300.
+      Deadlines sneak up on people. Feed this a list of what's coming — a treasury desk's funding cycle, a
+      project's milestones — and it right-sizes the answer to the space you have. Drag <strong>now</strong>
+      through time and watch four devices re-summarize the same events at once: 40 characters on the watch,
+      300 on the smart display.
     </p>
   </header>
 
@@ -546,7 +548,8 @@
   var FIXTURES = /*__FIXTURES__*/;
   var DAY = 86400000;
   var PRESETS = ["watch", "widget", "spoken", "display"];
-  var TAG_PRIORITIES = { travel: 2, medical: 2 };
+  // What the operator's domain says is worth interrupting for.
+  var TAG_PRIORITIES = { dependency: 2, audit: 2, filing: 2, funding: 1, milestone: 1 };
 
   var els = {
     dataset: document.getElementById("dataset"),
@@ -566,7 +569,7 @@
     voiceNote: document.getElementById("voiceNote")
   };
 
-  var state = { id: "quiet-then-burst", events: [], anchor: 0, offset: 0 };
+  var state = { id: "quiet-then-crunch", events: [], anchor: 0, offset: 0 };
 
   Object.keys(FIXTURES).forEach(function (id) {
     var o = document.createElement("option");
@@ -741,6 +744,6 @@
     window.addEventListener("beforeunload", function () { synth.cancel(); });
   }
 
-  loadDataset("quiet-then-burst");
+  loadDataset("quiet-then-crunch");
 })();
 </script>

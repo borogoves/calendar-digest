@@ -13,11 +13,11 @@ import { printReport } from "../shared/report.mjs";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const DATASETS = [
-  ["empty", "Nothing on the calendar at all"],
-  ["quiet-then-burst", "A quiet week, then 6 events packed into 3 days"],
-  ["recurring-heavy", "Daily/weekly series burying a few one-off events"],
-  ["overloaded-conference", "A 5-day, 20-event conference week"],
-  ["critical-outlier", "Sparse calendar plus one far-out high-priority flight"],
+  ["empty", "Nothing on the books at all"],
+  ["quiet-then-crunch", "Treasury: quiet, then a funding cycle drops 6 tasks in 3 days"],
+  ["buried-by-routine", "Treasury: daily/weekly routine burying 4 real deadlines"],
+  ["release-week", "Project: a 20-event release week"],
+  ["sneaky-dependency", "Project: calm quarter plus a critical vendor deadline"],
 ];
 
 async function loadDataset(idOrIndex) {

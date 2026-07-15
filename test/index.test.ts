@@ -556,17 +556,17 @@ describe("briefDigest with priorities", () => {
     expect(brief.text).not.toMatch(/\+\d+$/);
   });
 
-  it("seats a break-through event even when nothing fits, rather than dropping it silently", () => {
-    // A long name in relative mode leaves no variant short enough to
-    // satisfy the watch budget at all — the flight must still appear,
-    // even at the cost of a character or two of overflow.
+  it("drops the opening rather than the break-through when they can't both fit", () => {
+    // The opening only guarantees that *something* renders; a flagged event
+    // satisfies that and outranks it. So the flight appears and stays
+    // inside the budget — neither omitted nor overrunning.
     const events = [
       ev("Dinner with Sam", "2026-07-15T23:00:00Z"),
       ev("Flight to Tokyo", "2026-08-30T13:00:00Z", { priority: 2 }),
     ];
     const brief = briefDigest(events, { ...NY, budget: "watch", mode: "relative" });
     expect(brief.text).toContain("Flight to Tokyo");
-    expect(brief.text.length).toBeLessThanOrEqual(45); // small, documented overflow — never silent omission
+    expect(brief.text.length).toBeLessThanOrEqual(40);
   });
 
   it("does not repeat the opening's event in the burst headline", () => {
@@ -580,6 +580,23 @@ describe("briefDigest with priorities", () => {
     expect(brief.text).toContain("Next up: board meeting");
     expect(brief.text).not.toContain("incl. board meeting");
     expect(brief.text.match(/board meeting/g)).toHaveLength(1);
+  });
+
+  it("never exceeds the budget, even for a long-named priority event", () => {
+    // The budget is a physical constraint: priority buys first claim on the
+    // space, never permission to overrun it. The name gets clipped instead.
+    const events = [
+      ...burst,
+      ev("Vendor API v1 sunset — migrate by", "2026-08-30T13:00:00Z", { priority: 2 }),
+    ];
+    for (const budget of [40, 80, 140, 170, 300]) {
+      const brief = briefDigest(events, { ...NY, budget });
+      expect(brief.text.length, `budget ${budget}: "${brief.text}"`).toBeLessThanOrEqual(budget);
+    }
+    // It still earns its place on the smallest screen, just abbreviated.
+    const watch = briefDigest(events, { ...NY, budget: "watch" });
+    expect(watch.text).toContain("Aug 30");
+    expect(watch.text).toMatch(/Vendor API/);
   });
 
   it("keeps chronological display order when everything fits", () => {
