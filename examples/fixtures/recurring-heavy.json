@@ -1,0 +1,696 @@
+{
+  "description": "A real mixed calendar: daily 'Call mom' and weekly 'Team sync' would dominate every summary at face value — they collapse to background, along with a new biweekly '1:1 with manager' (a good look at the 'every other Wednesday' cadence naming) — so the dentist, a kid's soccer game, dinner plans, a flight, and work deadlines all stay visible and interleaved.",
+  "anchor": "2026-07-09T16:00:00.000Z",
+  "timeZone": "America/New_York",
+  "events": [
+    {
+      "name": "Call mom",
+      "start": "2026-07-10T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-11T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-12T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-13T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-14T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-15T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-16T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-17T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-18T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-19T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-20T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-21T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-22T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-23T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-24T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-25T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-26T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-27T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-28T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-29T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-30T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-07-31T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-01T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-02T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-03T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-04T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-05T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-06T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-07T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-08T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-09T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-10T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-11T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-12T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-13T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-14T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-15T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-16T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-17T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-18T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-19T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-20T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-21T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-22T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-23T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-24T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-25T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-26T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-27T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-28T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-29T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-30T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-08-31T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-09-01T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-09-02T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-09-03T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-09-04T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-09-05T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-09-06T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Call mom",
+      "start": "2026-09-07T17:00:00.000Z",
+      "seriesId": "mom",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Team sync",
+      "start": "2026-07-13T14:00:00.000Z",
+      "seriesId": "sync",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Team sync",
+      "start": "2026-07-20T14:00:00.000Z",
+      "seriesId": "sync",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Team sync",
+      "start": "2026-07-27T14:00:00.000Z",
+      "seriesId": "sync",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Team sync",
+      "start": "2026-08-03T14:00:00.000Z",
+      "seriesId": "sync",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Team sync",
+      "start": "2026-08-10T14:00:00.000Z",
+      "seriesId": "sync",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Team sync",
+      "start": "2026-08-17T14:00:00.000Z",
+      "seriesId": "sync",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Team sync",
+      "start": "2026-08-24T14:00:00.000Z",
+      "seriesId": "sync",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Team sync",
+      "start": "2026-08-31T14:00:00.000Z",
+      "seriesId": "sync",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Team sync",
+      "start": "2026-09-07T14:00:00.000Z",
+      "seriesId": "sync",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Team sync",
+      "start": "2026-09-14T14:00:00.000Z",
+      "seriesId": "sync",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Team sync",
+      "start": "2026-09-21T14:00:00.000Z",
+      "seriesId": "sync",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Team sync",
+      "start": "2026-09-28T14:00:00.000Z",
+      "seriesId": "sync",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "1:1 with manager",
+      "start": "2026-07-15T19:00:00.000Z",
+      "seriesId": "oneonone",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "1:1 with manager",
+      "start": "2026-07-29T19:00:00.000Z",
+      "seriesId": "oneonone",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "1:1 with manager",
+      "start": "2026-08-12T19:00:00.000Z",
+      "seriesId": "oneonone",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "1:1 with manager",
+      "start": "2026-08-26T19:00:00.000Z",
+      "seriesId": "oneonone",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "1:1 with manager",
+      "start": "2026-09-09T19:00:00.000Z",
+      "seriesId": "oneonone",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "1:1 with manager",
+      "start": "2026-09-23T19:00:00.000Z",
+      "seriesId": "oneonone",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Dentist",
+      "start": "2026-07-16T15:00:00.000Z"
+    },
+    {
+      "name": "Mia's soccer game",
+      "start": "2026-07-18T14:00:00.000Z",
+      "tags": [
+        "family"
+      ]
+    },
+    {
+      "name": "Haircut",
+      "start": "2026-07-20T17:00:00.000Z"
+    },
+    {
+      "name": "Dinner with the Kwans",
+      "start": "2026-07-25T23:00:00.000Z",
+      "tags": [
+        "social"
+      ]
+    },
+    {
+      "name": "Q3 planning kickoff",
+      "start": "2026-07-27T13:00:00.000Z",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Flight to Denver",
+      "start": "2026-08-05T12:00:00.000Z",
+      "tags": [
+        "travel"
+      ]
+    },
+    {
+      "name": "Client call — Acme renewal",
+      "start": "2026-08-12T15:00:00.000Z",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Car inspection",
+      "start": "2026-08-14T13:00:00.000Z"
+    },
+    {
+      "name": "Performance review",
+      "start": "2026-08-26T18:00:00.000Z",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "name": "Weekend trip — Asheville",
+      "start": "2026-09-05",
+      "tags": [
+        "travel"
+      ]
+    },
+    {
+      "name": "Annual checkup",
+      "start": "2026-09-02T14:00:00.000Z"
+    }
+  ]
+}

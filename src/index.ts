@@ -24,4 +24,16 @@ export { timelineDigest } from "./timeline.js";
 export type { CalendarDigest, CalendarDigestOptions, CalendarDay } from "./calendar.js";
 export { calendarDigest } from "./calendar.js";
 export type { SpecificityOptions } from "./format.js";
-export { describeEvent, formatTime, formatDay, relativeDuration, vaguePeriod, vaguePeriodShort } from "./format.js";
+export {
+  describeEvent,
+  formatTime,
+  formatTimeCompact,
+  formatDay,
+  formatWeekdayShort,
+  formatMonthDay,
+  formatMonthYear,
+  relativeDuration,
+  vaguePeriod,
+  vaguePeriodShort,
+} from "./format.js";
+export { joinList, pluralize } from "./vocab.js";

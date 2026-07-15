@@ -10,6 +10,7 @@ import type { SeriesSummary } from "./series.js";
 import { summarizeSeries } from "./series.js";
 import type { TieredWindowOptions } from "./tiers.js";
 import { tieredWindow } from "./tiers.js";
+import { joinList, pluralize } from "./vocab.js";
 
 export interface TextDigestOptions extends TieredWindowOptions, PriorityOptions, SpecificityOptions {
   /** Hard cap on sentences (the "space budget"). Default 3. */
@@ -117,8 +118,9 @@ function groupSentence(
   maxNamed: number,
   options?: TextDigestOptions,
 ): string {
+  const locale = options?.locale ?? "en-US";
   const count = events.length;
-  const noun = count === 1 ? "event" : "events";
+  const noun = pluralize(count, "event", locale);
   const countPhrase = more ? `${count} more ${noun}` : `${count} ${noun}`;
   const tagPriorities = options?.tagPriorities;
 
@@ -141,6 +143,8 @@ function groupSentence(
         ...(options?.dateBoundaryDays !== undefined ? { dateBoundaryDays: options.dateBoundaryDays } : {}),
         ...(options?.vagueBoundaryDays !== undefined ? { vagueBoundaryDays: options.vagueBoundaryDays } : {}),
         ...(options?.mode !== undefined ? { mode: options.mode } : {}),
+        ...(options?.hour12 !== undefined ? { hour12: options.hour12 } : {}),
+        locale,
         forceSpecific: eventPriority(e, tagPriorities) > 0,
       }),
     ),
@@ -148,17 +152,11 @@ function groupSentence(
   ];
   if (overflow > 0) items.push(`${overflow} more`);
 
-  const sentence = `${countPhrase} ${phrase}: ${joinList(items)}.`;
+  const sentence = `${countPhrase} ${phrase}: ${joinList(items, locale)}.`;
   return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }
 
 function describeSeries(series: SeriesSummary): string {
   const detail = series.time === undefined ? series.cadence : `${series.cadence} at ${series.time}`;
   return `${series.name} (${detail})`;
-}
-
-function joinList(items: string[]): string {
-  if (items.length <= 1) return items[0] ?? "";
-  if (items.length === 2) return `${items[0]} and ${items[1]}`;
-  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }

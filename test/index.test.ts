@@ -420,6 +420,56 @@ describe("shapeDigest", () => {
       { startDate: "2026-07-09", endDate: "2026-10-06", days: 90 },
     ]);
   });
+
+  describe("direction: backward", () => {
+    it("mirrors the forward cluster/quiet-stretch detection exactly", () => {
+      // Forward's fixture (Jul 16-18 cluster, 7 quiet days before it, in a
+      // 90-day forward window) mirrored around "now": a Jul 1-3 cluster,
+      // quiet after it back up to now, in a 90-day backward window. Same
+      // clustering machinery, just which end "now" sits at flips.
+      const events = [
+        ev("Dentist", "2026-07-01T15:00:00Z"),
+        ev("Recital", "2026-07-02T22:00:00Z"),
+        ev("Hike", "2026-07-03T14:00:00Z"),
+      ];
+      const shape = shapeDigest(events, { ...NY, direction: "backward" });
+      expect(shape.leadingQuietDays).toBe(6); // Jul 3 -> Jul 9
+      expect(shape.nextEvent!.source.name).toBe("Hike"); // most recent, not earliest
+      expect(shape.clusters).toHaveLength(1);
+      expect(shape.clusters[0]).toMatchObject({
+        startDate: "2026-07-01",
+        endDate: "2026-07-03",
+        days: 3,
+        count: 3,
+        intensity: 1,
+      });
+      expect(shape.horizonStart.toISOString()).toBe("2026-04-10T04:00:00.000Z"); // midnight EDT, 90d back
+      expect(shape.horizonEnd.toISOString()).toBe("2026-07-09T16:00:00.000Z");
+    });
+
+    it("still splits/merges clusters by minQuietDays and moves series to background", () => {
+      const events = [
+        ev("A", "2026-07-04T15:00:00Z"),
+        ev("B", "2026-07-05T15:00:00Z"),
+        ev("C", "2026-07-08T15:00:00Z"), // 2 empty days before this
+      ];
+      const split = shapeDigest(events, { ...NY, direction: "backward" });
+      expect(split.clusters.map((c) => c.startDate)).toEqual(["2026-07-04", "2026-07-08"]);
+
+      const merged = shapeDigest(events, { ...NY, direction: "backward", minQuietDays: 3 });
+      expect(merged.clusters).toHaveLength(1);
+
+      const withSeries = [
+        ...Array.from({ length: 10 }, (_, i) =>
+          ev("Call mom", `2026-06-${20 + i}T17:00:00Z`, { seriesId: "mom" }),
+        ),
+        ev("Dentist", "2026-07-03T15:00:00Z"),
+      ];
+      const shape = shapeDigest(withSeries, { ...NY, direction: "backward" });
+      expect(shape.background.map((s) => s.name)).toEqual(["Call mom"]);
+      expect(shape.clusters.some((c) => c.count === 1)).toBe(true);
+    });
+  });
 });
 
 describe("briefDigest", () => {
@@ -525,7 +575,7 @@ describe("briefDigest with priorities", () => {
 
   it("breaks a far high-priority event through nearer trivia at watch size", () => {
     const brief = briefDigest([...burst, flight], { ...NY, budget: "watch" });
-    expect(brief.text).toBe("Quiet til Tue · flight Aug 30 9 AM · +6");
+    expect(brief.text).toBe("Quiet til Tue · flight Aug 30 9a · +6");
     expect(brief.text.length).toBeLessThanOrEqual(40);
   });
 
@@ -536,7 +586,7 @@ describe("briefDigest with priorities", () => {
       budget: "watch",
       tagPriorities: { travel: 2 },
     });
-    expect(brief.text).toBe("Quiet til Tue · flight Aug 30 9 AM · +6");
+    expect(brief.text).toBe("Quiet til Tue · flight Aug 30 9a · +6");
   });
 
   it("never evicts a break-through event to make room for the '+N' count", () => {
@@ -632,6 +682,65 @@ describe("briefDigest with priorities", () => {
     expect(digest.sentences[0]!.text).toBe(
       "4 events today: Sofia call at 4:00 PM, A at 1:00 PM, B at 2:00 PM, and 1 more.",
     );
+  });
+});
+
+describe("briefDigest direction: backward", () => {
+  // Mirror image of the forward "quiet-then-burst" fixture: a burst just
+  // behind now, then quiet up to today.
+  const recentBurst = [
+    ev("dentist", "2026-07-01T15:00:00Z"),
+    ev("board meeting", "2026-07-01T18:00:00Z"),
+    ev("recital", "2026-07-02T22:00:00Z"),
+    ev("party", "2026-07-02T23:00:00Z"),
+    ev("hike", "2026-07-03T14:00:00Z"),
+    ev("brunch", "2026-07-03T15:00:00Z"),
+  ];
+
+  it("says 'quiet since' + narrates the recent burst, mirroring the forward wording", () => {
+    const brief = briefDigest(recentBurst, { ...NY, direction: "backward", budget: "widget" });
+    expect(brief.text).toBe(
+      "Nothing since Fri, then a busy stretch Jul 1–3: 6 events, incl. dentist.",
+    );
+  });
+
+  it("compresses to 'Quiet since' at watch size", () => {
+    const brief = briefDigest(recentBurst, { ...NY, direction: "backward", budget: "watch" });
+    expect(brief.text).toBe("Quiet since Fri · 6 in 3d");
+  });
+
+  it("says 'Last:' with '... ago' phrasing when something just happened", () => {
+    const brief = briefDigest([ev("Standup", "2026-07-09T15:45:00Z")], { ...NY, direction: "backward" });
+    expect(brief.text).toBe("Last: Standup 15 min ago.");
+  });
+
+  it("names events with 'ago'/'yesterday' instead of 'in'/'tomorrow'", () => {
+    const events = [
+      ev("Yesterday call", "2026-07-08T17:00:00Z"),
+      ev("Older call", "2026-07-06T17:00:00Z"),
+    ];
+    const brief = briefDigest(events, { ...NY, direction: "backward", budget: "display" });
+    expect(brief.text).toContain("yesterday at 1:00 PM");
+    expect(brief.text).toContain("on Mon at 1:00 PM");
+    expect(brief.text).not.toContain("tomorrow");
+  });
+
+  it("combines with relative mode: durations read as '... ago', not 'in ...'", () => {
+    const brief = briefDigest(recentBurst, {
+      ...NY, direction: "backward", mode: "relative", budget: "display",
+    });
+    expect(brief.text).toContain("Quiet for 6 days");
+    expect(brief.text).not.toContain("nothing in");
+  });
+
+  it("still lets a priority event break through, phrased in the past", () => {
+    const events = [
+      ...recentBurst,
+      ev("layoff notice — Acme", "2026-05-01T13:00:00Z", { priority: 2 }),
+    ];
+    const brief = briefDigest(events, { ...NY, direction: "backward", budget: "watch" });
+    expect(brief.text).toContain("layoff notice");
+    expect(brief.text.length).toBeLessThanOrEqual(40);
   });
 });
 

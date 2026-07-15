@@ -1,0 +1,39 @@
+{
+  "description": "An ordinary sparse calendar, plus a flight 7 weeks out flagged priority:2 (tags: travel). Run with tagPriorities:{travel:2} to see it break through nearer, lesser events at watch size instead of being buried past a '+N'.",
+  "anchor": "2026-07-09T16:00:00.000Z",
+  "timeZone": "America/New_York",
+  "events": [
+    {
+      "name": "Dinner with Sam",
+      "start": "2026-07-15T23:00:00.000Z"
+    },
+    {
+      "name": "Car service",
+      "start": "2026-07-25T14:00:00.000Z"
+    },
+    {
+      "name": "Book club",
+      "start": "2026-08-05T23:00:00.000Z"
+    },
+    {
+      "name": "Flight to Tokyo",
+      "start": "2026-08-30T13:00:00.000Z",
+      "priority": 2,
+      "tags": [
+        "travel"
+      ]
+    },
+    {
+      "name": "Haircut",
+      "start": "2026-08-20T17:00:00.000Z"
+    },
+    {
+      "name": "Dinner party",
+      "start": "2026-09-10T23:00:00.000Z"
+    },
+    {
+      "name": "Movie night",
+      "start": "2026-09-25T23:00:00.000Z"
+    }
+  ]
+}

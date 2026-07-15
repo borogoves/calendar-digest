@@ -13,7 +13,11 @@ import { printReport } from "../shared/report.mjs";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const DATASETS = [
-  ["empty", "Nothing on the books at all"],
+  ["empty", "Nothing on the calendar at all"],
+  ["quiet-then-burst", "Personal: a quiet week, then 6 events in 3 days"],
+  ["recurring-heavy", "Personal: an everyday mixed calendar, personal + work"],
+  ["overloaded-conference", "Personal: a 5-day conference week"],
+  ["critical-outlier", "Personal: sparse calendar plus one critical flight"],
   ["quiet-then-crunch", "Treasury: quiet, then a funding cycle drops 6 tasks in 3 days"],
   ["buried-by-routine", "Treasury: daily/weekly routine burying 4 real deadlines"],
   ["release-week", "Project: a 20-event release week"],
@@ -54,7 +58,7 @@ const ask = async (question, fallback) => {
 
 let again = true;
 while (again) {
-  const pick = await ask("\nWhich dataset (1-5)", "2");
+  const pick = await ask(`\nWhich dataset (1-${DATASETS.length})`, "3");
   const dataset = await loadDataset(pick);
   const dayOffset = Number(await ask("Start how many days from the anchor (negative goes earlier)", "0"));
   const days = Number(await ask("How many days ahead to look", "90"));

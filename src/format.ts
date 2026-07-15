@@ -1,42 +1,95 @@
 import { dayNumber, wallTime } from "./tz.js";
 import type { ResolvedEvent } from "./types.js";
 
+/** Default locale for every formatter below — unchanged output if callers never pass one. */
+const DEFAULT_LOCALE = "en-US";
+
 const fmtCache = new Map<string, Intl.DateTimeFormat>();
 
-function formatter(timeZone: string, options: Intl.DateTimeFormatOptions, kind: string): Intl.DateTimeFormat {
-  const key = `${timeZone}|${kind}`;
+function formatter(
+  timeZone: string,
+  options: Intl.DateTimeFormatOptions,
+  kind: string,
+  locale = DEFAULT_LOCALE,
+): Intl.DateTimeFormat {
+  const key = `${locale}|${timeZone}|${kind}`;
   let fmt = fmtCache.get(key);
   if (!fmt) {
-    fmt = new Intl.DateTimeFormat("en-US", { timeZone, ...options });
+    fmt = new Intl.DateTimeFormat(locale, { timeZone, ...options });
     fmtCache.set(key, fmt);
   }
   return fmt;
 }
 
-// Newer ICU inserts narrow no-break spaces before AM/PM; normalize so output
-// is stable across runtimes and safe for constrained displays.
+// Newer ICU inserts a narrow no-break space (U+202F) or no-break space
+// (U+00A0) before AM/PM; normalize to a plain space so output is stable
+// across runtimes and safe for constrained displays.
 function plain(text: string): string {
   return text.replace(/[  ]/g, " ");
 }
 
-/** "9:00 AM" */
-export function formatTime(date: Date, timeZone: string): string {
-  return plain(formatter(timeZone, { hour: "numeric", minute: "2-digit" }, "time").format(date));
+function timeFormatter(timeZone: string, locale: string, hour12: boolean | undefined): Intl.DateTimeFormat {
+  const opts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
+  if (hour12 !== undefined) opts.hour12 = hour12;
+  const kind = hour12 === undefined ? "time" : hour12 ? "time-12" : "time-24";
+  return formatter(timeZone, opts, kind, locale);
+}
+
+/**
+ * "9:00 AM" (locale-dependent — many locales render this as "9:00" or with
+ * their own day-period text). `hour12` overrides the locale's own 12/24-hour
+ * default when a caller wants one explicitly, regardless of locale.
+ */
+export function formatTime(date: Date, timeZone: string, locale = DEFAULT_LOCALE, hour12?: boolean): string {
+  return plain(timeFormatter(timeZone, locale, hour12).format(date));
+}
+
+/**
+ * The tightest correct rendering of a time for a character-constrained
+ * surface. For a short, Latin-script day period (English "AM"/"PM",
+ * Spanish "a. m."/"p. m.", etc.) this glues a lowercase initial straight
+ * onto the number — "9a", "9:30p" — and drops ":00" on the hour. Locales
+ * with no day period (24-hour clocks, or `hour12: false` forced) or a
+ * non-Latin one (e.g. CJK, which already renders in 2 characters) are
+ * returned as Intl formats them, since there's no verifiable universal
+ * shortening for those scripts.
+ */
+export function formatTimeCompact(date: Date, timeZone: string, locale = DEFAULT_LOCALE, hour12?: boolean): string {
+  const parts = timeFormatter(timeZone, locale, hour12).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value;
+  const hour = get("hour");
+  const minute = get("minute");
+  const dayPeriod = get("dayPeriod");
+  if (hour === undefined) return plain(parts.map((p) => p.value).join(""));
+
+  const time = minute === "00" ? hour : `${hour}:${minute}`;
+  if (dayPeriod !== undefined && /^[A-Za-z][A-Za-z.\s]{0,5}$/.test(dayPeriod)) {
+    const initial = dayPeriod.replace(/[.\s]/g, "").charAt(0).toLowerCase();
+    return `${time}${initial}`;
+  }
+  return plain(dayPeriod ? `${time} ${dayPeriod}` : time);
+}
+
+/** "Tue" */
+export function formatWeekdayShort(date: Date, timeZone: string, locale = DEFAULT_LOCALE): string {
+  return plain(formatter(timeZone, { weekday: "short" }, "weekday", locale).format(date));
 }
 
 /** "Tue, Jul 14" */
-export function formatDay(date: Date, timeZone: string): string {
-  return plain(formatter(timeZone, { weekday: "short", month: "short", day: "numeric" }, "day").format(date));
+export function formatDay(date: Date, timeZone: string, locale = DEFAULT_LOCALE): string {
+  return plain(
+    formatter(timeZone, { weekday: "short", month: "short", day: "numeric" }, "day", locale).format(date),
+  );
 }
 
 /** "Jul 14" */
-export function formatMonthDay(date: Date, timeZone: string): string {
-  return plain(formatter(timeZone, { month: "short", day: "numeric" }, "monthday").format(date));
+export function formatMonthDay(date: Date, timeZone: string, locale = DEFAULT_LOCALE): string {
+  return plain(formatter(timeZone, { month: "short", day: "numeric" }, "monthday", locale).format(date));
 }
 
 /** "Jul 2026" */
-export function formatMonthYear(date: Date, timeZone: string): string {
-  return plain(formatter(timeZone, { month: "short", year: "numeric" }, "monthyear").format(date));
+export function formatMonthYear(date: Date, timeZone: string, locale = DEFAULT_LOCALE): string {
+  return plain(formatter(timeZone, { month: "short", year: "numeric" }, "monthyear", locale).format(date));
 }
 
 function vaguePart(date: Date, timeZone: string): "early" | "mid" | "late" {
@@ -50,14 +103,14 @@ function yearSuffix(date: Date, timeZone: string, now: Date): string {
 }
 
 /** "early August", or "late August 2027" when it's not the current year. */
-export function vaguePeriod(date: Date, timeZone: string, now: Date): string {
-  const month = plain(formatter(timeZone, { month: "long" }, "month-long").format(date));
+export function vaguePeriod(date: Date, timeZone: string, now: Date, locale = DEFAULT_LOCALE): string {
+  const month = plain(formatter(timeZone, { month: "long" }, "month-long", locale).format(date));
   return `${vaguePart(date, timeZone)} ${month}${yearSuffix(date, timeZone, now)}`;
 }
 
 /** Compact form of vaguePeriod: "early Aug", or "late Aug 2027". */
-export function vaguePeriodShort(date: Date, timeZone: string, now: Date): string {
-  const month = plain(formatter(timeZone, { month: "short" }, "month-short").format(date));
+export function vaguePeriodShort(date: Date, timeZone: string, now: Date, locale = DEFAULT_LOCALE): string {
+  const month = plain(formatter(timeZone, { month: "short" }, "month-short", locale).format(date));
   return `${vaguePart(date, timeZone)} ${month}${yearSuffix(date, timeZone, now)}`;
 }
 
@@ -73,6 +126,20 @@ export interface SpecificityOptions {
    * 3 months") instead of ever naming a date.
    */
   mode?: "calendar" | "relative";
+  /**
+   * BCP 47 locale tag (e.g. "es", "fr-CA", "ja"). Governs every Intl-driven
+   * piece of output — weekday/month names, list joining, pluralization —
+   * and, for the compact time form, whether a day period like "AM" gets
+   * shortened to a glued letter. Default "en-US"; unset behaves exactly as
+   * before this option existed.
+   */
+  locale?: string;
+  /**
+   * Force 12-hour ("2:00 PM") or 24-hour ("14:00") time, overriding the
+   * locale's own default. Unset: the locale decides, same as before this
+   * option existed.
+   */
+  hour12?: boolean;
 }
 
 interface DescribeEventOptions extends SpecificityOptions {
@@ -141,6 +208,8 @@ export function describeEvent(
   const dateBoundaryDays = options?.dateBoundaryDays ?? 7;
   const vagueBoundaryDays = options?.vagueBoundaryDays ?? 30;
   const forceSpecific = options?.forceSpecific ?? false;
+  const locale = options?.locale ?? DEFAULT_LOCALE;
+  const hour12 = options?.hour12;
 
   if (options?.mode === "relative") {
     if (event.allDay) {
@@ -153,17 +222,17 @@ export function describeEvent(
   }
 
   if (!includeDate) {
-    return event.allDay ? `${name} (all day)` : `${name} at ${formatTime(event.start, timeZone)}`;
+    return event.allDay ? `${name} (all day)` : `${name} at ${formatTime(event.start, timeZone, locale, hour12)}`;
   }
   if (forceSpecific) {
     return event.allDay
-      ? `${name} on ${formatDay(event.start, timeZone)}`
-      : `${name} on ${formatDay(event.start, timeZone)} at ${formatTime(event.start, timeZone)}`;
+      ? `${name} on ${formatDay(event.start, timeZone, locale)}`
+      : `${name} on ${formatDay(event.start, timeZone, locale)} at ${formatTime(event.start, timeZone, locale, hour12)}`;
   }
   const delta = dayNumber(event.start, timeZone) - dayNumber(now, timeZone);
 
-  if (delta >= vagueBoundaryDays) return `${name} in ${vaguePeriod(event.start, timeZone, now)}`;
-  if (event.allDay) return `${name} on ${formatDay(event.start, timeZone)}`;
-  if (delta >= dateBoundaryDays) return `${name} on ${formatDay(event.start, timeZone)}`;
-  return `${name} on ${formatDay(event.start, timeZone)} at ${formatTime(event.start, timeZone)}`;
+  if (delta >= vagueBoundaryDays) return `${name} in ${vaguePeriod(event.start, timeZone, now, locale)}`;
+  if (event.allDay) return `${name} on ${formatDay(event.start, timeZone, locale)}`;
+  if (delta >= dateBoundaryDays) return `${name} on ${formatDay(event.start, timeZone, locale)}`;
+  return `${name} on ${formatDay(event.start, timeZone, locale)} at ${formatTime(event.start, timeZone, locale, hour12)}`;
 }

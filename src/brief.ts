@@ -1,5 +1,13 @@
 import { resolveOptions } from "./events.js";
-import { formatMonthDay, formatTime, relativeDuration, vaguePeriod, vaguePeriodShort } from "./format.js";
+import {
+  formatMonthDay,
+  formatTime,
+  formatTimeCompact,
+  formatWeekdayShort,
+  relativeDuration,
+  vaguePeriod,
+  vaguePeriodShort,
+} from "./format.js";
 import type { SpecificityOptions } from "./format.js";
 import type { PriorityOptions } from "./priority.js";
 import { eventPriority } from "./priority.js";
@@ -63,7 +71,6 @@ interface Chosen {
   text: string;
 }
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const RANK = { opening: 0, breakThrough: 1, normal: 2, series: 3, more: 9 } as const;
 
 /** Shorten to `max` characters, breaking at a word boundary where possible. */
@@ -94,76 +101,103 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
   const horizonDays = options?.days ?? 90;
   const shape = shapeDigest(events, options);
   const todayDay = dayNumber(opts.now, tz);
+  const locale = options?.locale ?? "en-US";
+  const hour12 = options?.hour12;
+  const forward = (options?.direction ?? "forward") === "forward";
 
   const dateOfDay = (day: number) => new Date(day * 86_400_000);
+  // "on Wed at 2pm" / "in early August" read fine as either past or future
+  // (English "on"/"in" aren't tensed), so only the day label itself and the
+  // near/far distance thresholds need to flip for backward mode.
   const dayLabel = (day: number): string => {
     const delta = day - todayDay;
     if (delta === 0) return "today";
-    if (delta === 1) return "tomorrow";
-    if (delta <= 6) return WEEKDAYS[dateOfDay(day).getUTCDay()]!;
-    return formatMonthDay(dateOfDay(day), "UTC");
+    if (forward) {
+      if (delta === 1) return "tomorrow";
+      if (delta <= 6) return formatWeekdayShort(dateOfDay(day), "UTC", locale);
+    } else {
+      if (delta === -1) return "yesterday";
+      if (delta >= -6) return formatWeekdayShort(dateOfDay(day), "UTC", locale);
+    }
+    return formatMonthDay(dateOfDay(day), "UTC", locale);
   };
   const rangeLabel = (firstDay: number, lastDay: number): string => {
-    if (lastDay - todayDay <= 6) return `${dayLabel(firstDay)}–${dayLabel(lastDay)}`;
+    if (Math.max(Math.abs(firstDay - todayDay), Math.abs(lastDay - todayDay)) <= 6) {
+      return `${dayLabel(firstDay)}–${dayLabel(lastDay)}`;
+    }
     const a = dateOfDay(firstDay);
     const b = dateOfDay(lastDay);
-    if (a.getUTCMonth() === b.getUTCMonth()) return `${formatMonthDay(a, "UTC")}–${b.getUTCDate()}`;
-    return `${formatMonthDay(a, "UTC")} – ${formatMonthDay(b, "UTC")}`;
+    if (a.getUTCMonth() === b.getUTCMonth()) return `${formatMonthDay(a, "UTC", locale)}–${b.getUTCDate()}`;
+    return `${formatMonthDay(a, "UTC", locale)} – ${formatMonthDay(b, "UTC", locale)}`;
   };
   const imminentMinutes = (e: ResolvedEvent): number | undefined => {
     if (e.allDay) return undefined;
     const mins = Math.round((e.start.getTime() - opts.now.getTime()) / 60_000);
-    return mins >= 0 && mins < 90 ? mins : undefined;
+    const signed = forward ? mins : -mins;
+    return signed >= 0 && signed < 90 ? signed : undefined;
   };
   const dateBoundaryDays = options?.dateBoundaryDays ?? 7;
   const vagueBoundaryDays = options?.vagueBoundaryDays ?? 30;
   const mode = options?.mode ?? "calendar";
   const priorityOf = (e: ResolvedEvent): number => eventPriority(e, options?.tagPriorities);
   // Relative mode never names a date — it always describes a duration
-  // from now instead ("in 2 hours", "in 5 weeks", "in 3 months").
+  // from now instead ("in 2 hours", "in 5 weeks", "3 months ago").
   const relativeGap = (day: number, forceSpecific: boolean): string => {
-    const delta = day - todayDay;
+    const delta = forward ? day - todayDay : todayDay - day;
     if (delta <= 0) return "today";
-    if (delta === 1) return "tomorrow";
-    return `in ${relativeDuration(delta * 86_400_000, dateBoundaryDays, vagueBoundaryDays, forceSpecific)}`;
+    if (delta === 1) return forward ? "tomorrow" : "yesterday";
+    const duration = relativeDuration(delta * 86_400_000, dateBoundaryDays, vagueBoundaryDays, forceSpecific);
+    return forward ? `in ${duration}` : `${duration} ago`;
   };
   // Priority-flagged events skip the coarsening below: flagging something
   // as important is itself a signal its exact timing still matters, no
   // matter how far out it is.
   const whenShort = (e: ResolvedEvent): string => {
     const mins = imminentMinutes(e);
-    if (mins !== undefined) return `in ${mins} min`;
+    if (mins !== undefined) return forward ? `in ${mins} min` : `${mins} min ago`;
     const forceSpecific = priorityOf(e) > 0;
     const day = dayNumber(e.start, tz);
-    const delta = day - todayDay;
+    const delta = forward ? day - todayDay : todayDay - day;
     if (mode === "relative") {
       if (e.allDay) return relativeGap(day, forceSpecific);
-      return `in ${relativeDuration(e.start.getTime() - opts.now.getTime(), dateBoundaryDays, vagueBoundaryDays, forceSpecific)}`;
+      const ms = Math.abs(e.start.getTime() - opts.now.getTime());
+      const duration = relativeDuration(ms, dateBoundaryDays, vagueBoundaryDays, forceSpecific);
+      return forward ? `in ${duration}` : `${duration} ago`;
     }
     if (!forceSpecific && delta >= vagueBoundaryDays) {
-      return vaguePeriodShort(dateOfDay(day), "UTC", dateOfDay(todayDay));
+      return vaguePeriodShort(dateOfDay(day), "UTC", dateOfDay(todayDay), locale);
     }
     const label = dayLabel(day);
     if (e.allDay || (!forceSpecific && delta >= dateBoundaryDays)) return label;
-    return `${label} ${formatTime(e.start, tz).replace(":00 ", " ")}`;
+    return `${label} ${formatTimeCompact(e.start, tz, locale, hour12)}`;
   };
-  const whenLong = (e: ResolvedEvent): string => {
+  // `compactTime` keeps the full "on X at Y" sentence structure but uses
+  // the compact time form ("2p" not "2:00 PM") — a middle rung between
+  // full prose and whenShort's terser "Wed 2p" (which drops "on"/"at"
+  // entirely), useful when a fragment needs to shave a few characters
+  // without reading as clipped.
+  const whenLong = (e: ResolvedEvent, compactTime = false): string => {
     const mins = imminentMinutes(e);
-    if (mins !== undefined) return `in ${mins} min`;
+    if (mins !== undefined) return forward ? `in ${mins} min` : `${mins} min ago`;
     const forceSpecific = priorityOf(e) > 0;
     const day = dayNumber(e.start, tz);
-    const delta = day - todayDay;
+    const delta = forward ? day - todayDay : todayDay - day;
     if (mode === "relative") {
       if (e.allDay) return relativeGap(day, forceSpecific);
-      return `in ${relativeDuration(e.start.getTime() - opts.now.getTime(), dateBoundaryDays, vagueBoundaryDays, forceSpecific)}`;
+      const ms = Math.abs(e.start.getTime() - opts.now.getTime());
+      const duration = relativeDuration(ms, dateBoundaryDays, vagueBoundaryDays, forceSpecific);
+      return forward ? `in ${duration}` : `${duration} ago`;
     }
     if (!forceSpecific && delta >= vagueBoundaryDays) {
-      return `in ${vaguePeriod(dateOfDay(day), "UTC", dateOfDay(todayDay))}`;
+      return `in ${vaguePeriod(dateOfDay(day), "UTC", dateOfDay(todayDay), locale)}`;
     }
     const label = dayLabel(day);
-    const prefix = delta <= 1 ? label : `on ${label}`;
+    const prefix = Math.abs(day - todayDay) <= 1 ? label : `on ${label}`;
     if (e.allDay || (!forceSpecific && delta >= dateBoundaryDays)) return prefix;
-    return `${prefix} at ${formatTime(e.start, tz)}`;
+    const time = compactTime
+      ? formatTimeCompact(e.start, tz, locale, hour12)
+      : formatTime(e.start, tz, locale, hour12);
+    return `${prefix} at ${time}`;
   };
 
   // --- Candidates ---------------------------------------------------------
@@ -182,25 +216,47 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     } else {
       candidates.push({
         kind: "quiet", rank: RANK.opening, index: index++,
-        prose: [`no events in the next ${horizonDays} days`],
+        prose: [forward ? `no events in the next ${horizonDays} days` : `no events in the last ${horizonDays} days`],
         compact: [`Free ${horizonDays}d`], events: [],
       });
     }
   } else if (shape.leadingQuietDays >= 2) {
-    const firstDay = dayNumber(shape.clusters[0]!.events[0]!.start, tz);
-    const gap = relativeGap(firstDay, false);
-    candidates.push({
-      kind: "quiet", rank: RANK.opening, index: index++,
-      prose: [mode === "relative" ? `nothing ${gap}` : `nothing until ${dayLabel(firstDay)}`],
-      compact: [mode === "relative" ? `Quiet ${gap}` : `Quiet til ${dayLabel(firstDay)}`], events: [],
-    });
+    // shape.nextEvent is already the one closest to now — soonest-upcoming
+    // forward, most-recent backward — so no separate lookup is needed here.
+    const anchorDay = dayNumber(shape.nextEvent!.start, tz);
+    if (mode === "relative") {
+      const gap = relativeGap(anchorDay, false);
+      // "since 3 days ago" double-marks the past tense; a plain duration
+      // ("quiet for 3 days") reads better than forcing "since" onto it.
+      const duration = forward
+        ? gap
+        : relativeDuration(shape.leadingQuietDays * 86_400_000, dateBoundaryDays, vagueBoundaryDays, false);
+      candidates.push({
+        kind: "quiet", rank: RANK.opening, index: index++,
+        prose: [forward ? `nothing ${duration}` : `quiet for ${duration}`],
+        compact: [forward ? `Quiet ${duration}` : `Quiet for ${duration}`], events: [],
+      });
+    } else {
+      const label = dayLabel(anchorDay);
+      candidates.push({
+        kind: "quiet", rank: RANK.opening, index: index++,
+        // "til" only shortens the forward form; "since" has no shorter
+        // synonym worth reaching for.
+        prose: forward ? [`nothing until ${label}`, `nothing til ${label}`] : [`nothing since ${label}`],
+        compact: [forward ? `Quiet til ${label}` : `Quiet since ${label}`], events: [],
+      });
+    }
   } else {
     const next = shape.nextEvent!;
     const name = next.source.name;
     candidates.push({
       kind: "next", rank: RANK.opening, index: index++,
-      prose: [`next up: ${name} ${whenLong(next)}`, `next: ${name} ${whenShort(next)}`],
-      compact: [`Next: ${name} ${whenShort(next)}`, `${name} ${whenShort(next)}`],
+      prose: forward
+        ? [`next up: ${name} ${whenLong(next)}`, `next: ${name} ${whenLong(next, true)}`, `next: ${name} ${whenShort(next)}`]
+        : [`last: ${name} ${whenLong(next)}`, `last: ${name} ${whenLong(next, true)}`, `last: ${name} ${whenShort(next)}`],
+      compact: forward
+        ? [`Next: ${name} ${whenShort(next)}`, `${name} ${whenShort(next)}`]
+        : [`Last: ${name} ${whenShort(next)}`, `${name} ${whenShort(next)}`],
       events: [next],
     });
   }
@@ -221,7 +277,7 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     const clipped = clip(name, 16);
     return {
       kind: "event", rank, index: index++,
-      prose: [`${name} ${whenLong(e)}`, `${name} ${shortForm}`],
+      prose: [`${name} ${whenLong(e)}`, `${name} ${whenLong(e, true)}`, `${name} ${shortForm}`],
       compact: [`${name} ${shortForm}`, `${name} ${fallback}`, `${clipped} ${fallback}`],
       events: [e],
     };
@@ -339,14 +395,23 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
     for (const c of chosen) for (const e of c.cand.events) set.add(e);
     return set.size;
   };
-  const horizonEndLabel = formatMonthDay(dateOfDay(todayDay + horizonDays - 1), "UTC");
+  // The far edge of the horizon, in whichever direction it extends.
+  const horizonEdgeLabel = formatMonthDay(
+    dateOfDay(todayDay + (forward ? horizonDays - 1 : -horizonDays)),
+    "UTC",
+    locale,
+  );
   for (;;) {
     const n = totalEvents - coveredCount();
     if (n <= 0) break;
     const more: Candidate = {
       kind: "more", rank: RANK.more, index: Number.MAX_SAFE_INTEGER,
       prose: [
-        mode === "relative" ? `${n} more in the next ${horizonDays} days` : `${n} more by ${horizonEndLabel}`,
+        mode === "relative"
+          ? `${n} more in the ${forward ? "next" : "last"} ${horizonDays} days`
+          : forward
+            ? `${n} more by ${horizonEdgeLabel}`
+            : `${n} more before ${horizonEdgeLabel}`,
         `${n} more`,
       ],
       compact: [`+${n}`], events: [],
