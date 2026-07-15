@@ -1,0 +1,746 @@
+<title>calendar-digest — device lab</title>
+
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --surface-sunk: #EDF0F4;
+    --text: #171B22;
+    --text-dim: #5A6478;
+    --border: #DFE3EA;
+    --signal: #C77A00;
+    --signal-screen: #FFB020;
+    --alert: #D6402E;
+    --calm: #7C8AA5;
+
+    --ink: #0E1116;
+    --graphite: #2B313C;
+
+    --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+    --step-0: 0.8125rem;
+    --step-1: 0.9375rem;
+    --step-2: 1.25rem;
+    --step-3: 1.75rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0E1116;
+      --surface: #171B22;
+      --surface-sunk: #10141A;
+      --text: #E8ECF2;
+      --text-dim: #8B97AC;
+      --border: #2A303B;
+      --signal: #FFB020;
+      --alert: #FF6B5B;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1116;
+    --surface: #171B22;
+    --surface-sunk: #10141A;
+    --text: #E8ECF2;
+    --text-dim: #8B97AC;
+    --border: #2A303B;
+    --signal: #FFB020;
+    --alert: #FF6B5B;
+  }
+  :root[data-theme="light"] {
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --surface-sunk: #EDF0F4;
+    --text: #171B22;
+    --text-dim: #5A6478;
+    --border: #DFE3EA;
+    --signal: #C77A00;
+    --alert: #D6402E;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: var(--step-1);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  /* ---- masthead ---- */
+  .masthead { display: flex; flex-direction: column; gap: 8px; }
+  .wordmark {
+    font-family: var(--font-mono);
+    font-size: var(--step-3);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .wordmark em { color: var(--signal); font-style: normal; }
+  .thesis {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--text-dim);
+    text-wrap: balance;
+  }
+
+  /* ---- shared panel ---- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-dim);
+    margin: 0 0 12px;
+  }
+
+  /* ---- bench ---- */
+  .bench {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: flex-start;
+  }
+  .device { display: flex; flex-direction: column; gap: 9px; }
+  .device__cap {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: baseline;
+  }
+  .device__count { font-variant-numeric: tabular-nums; }
+  .device__count.is-full { color: var(--signal); }
+
+  /* screens stay dark in both themes: they are objects, not chrome */
+  .screen {
+    background: var(--ink);
+    color: #F2F5F9;
+    font-family: var(--font-ui);
+    overflow: hidden;
+  }
+  .screen-text { white-space: normal; overflow-wrap: break-word; }
+
+  .bezel {
+    background: var(--graphite);
+    border-radius: 22px;
+    padding: 9px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 6px 18px rgba(0,0,0,0.22);
+  }
+
+  /* watch */
+  .device--watch { width: 186px; }
+  .device--watch .bezel { border-radius: 30px; }
+  .device--watch .screen {
+    border-radius: 22px;
+    min-height: 168px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .watch__clock {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--signal-screen);
+    font-variant-numeric: tabular-nums;
+  }
+  .device--watch .screen-text {
+    font-size: 0.8125rem;
+    line-height: 1.32;
+    font-weight: 500;
+  }
+
+  /* phone */
+  .device--phone { width: 232px; }
+  .device--phone .bezel { border-radius: 26px; }
+  .device--phone .screen {
+    border-radius: 18px;
+    min-height: 168px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .homebar {
+    height: 3px;
+    width: 62px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.28);
+    margin: auto auto 0;
+  }
+  .widget {
+    background: rgba(255,255,255,0.09);
+    border-radius: 13px;
+    padding: 11px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .widget__head {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--signal-screen);
+    font-weight: 700;
+  }
+  .device--phone .screen-text { font-size: 0.75rem; line-height: 1.38; }
+
+  /* voice */
+  .device--audio { width: 258px; }
+  .device--audio .screen {
+    border-radius: 16px;
+    min-height: 168px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .speak {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    background: var(--signal-screen);
+    color: #1A1206;
+    border: none;
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .speak:hover { filter: brightness(1.08); }
+  .speak:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .speak[disabled] { opacity: 0.45; cursor: not-allowed; }
+  .wave { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
+  .wave i {
+    flex: 1;
+    background: var(--signal-screen);
+    border-radius: 1px;
+    height: 15%;
+    opacity: 0.32;
+  }
+  .wave.is-live i { animation: bounce 0.9s ease-in-out infinite; opacity: 1; }
+  .wave.is-live i:nth-child(2) { animation-delay: 0.12s; }
+  .wave.is-live i:nth-child(3) { animation-delay: 0.24s; }
+  .wave.is-live i:nth-child(4) { animation-delay: 0.36s; }
+  .wave.is-live i:nth-child(5) { animation-delay: 0.48s; }
+  .wave.is-live i:nth-child(6) { animation-delay: 0.6s; }
+  .wave.is-live i:nth-child(7) { animation-delay: 0.72s; }
+  @keyframes bounce { 0%,100% { height: 15%; } 50% { height: 100%; } }
+  .device--audio .screen-text {
+    font-size: 0.75rem;
+    line-height: 1.42;
+    color: #C9D2DE;
+  }
+  .voice-note {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    color: var(--text-dim);
+  }
+
+  /* display */
+  .device--display { flex: 1; min-width: 300px; }
+  .device--display .bezel { border-radius: 14px; }
+  .device--display .screen {
+    border-radius: 8px;
+    min-height: 168px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .display__clock {
+    font-size: 1.875rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .display__date {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--signal-screen);
+  }
+  .device--display .screen-text { font-size: 0.9375rem; line-height: 1.5; max-width: 54ch; }
+
+  /* ---- scrubber ---- */
+  .strip {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 54px;
+    padding: 0 1px;
+    background: var(--surface-sunk);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .strip__bar {
+    flex: 1;
+    background: var(--calm);
+    border-radius: 2px 2px 0 0;
+    min-height: 2px;
+    opacity: 0.5;
+  }
+  .strip__bar.is-hot { background: var(--signal); opacity: 1; }
+  .strip__now {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--alert);
+    pointer-events: none;
+  }
+  .strip__now::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--alert);
+  }
+  .scrub-row { display: flex; flex-direction: column; gap: 10px; }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--alert);
+    cursor: grab;
+  }
+  input[type="range"]:active { cursor: grabbing; }
+  input[type="range"]:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+  .readout {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+  .readout strong { color: var(--text); font-weight: 600; }
+
+  /* ---- controls ---- */
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    gap: 14px;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field > span {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+  select, textarea {
+    font-family: var(--font-mono);
+    font-size: var(--step-0);
+    color: var(--text);
+    background: var(--surface-sunk);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 1px;
+  }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: var(--step-0);
+    align-self: end;
+    padding-bottom: 8px;
+  }
+  .check input { accent-color: var(--signal); width: 15px; height: 15px; }
+
+  /* ---- editor ---- */
+  .editor { display: flex; flex-direction: column; gap: 8px; }
+  textarea { min-height: 168px; resize: vertical; line-height: 1.5; tab-size: 2; }
+  .status {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--text-dim);
+    min-height: 1.2em;
+  }
+  .status.is-bad { color: var(--alert); }
+
+  .note {
+    font-size: var(--step-0);
+    color: var(--text-dim);
+    max-width: 68ch;
+  }
+  .note code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--surface-sunk);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wave.is-live i { animation: none; height: 55%; }
+    * { transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <h1 class="wordmark">calendar<em>-</em>digest</h1>
+    <p class="thesis">
+      One calendar, four devices, one instant. Drag <strong>now</strong> through time and watch the same
+      events get re-summarized to fit each screen — the watch gets 40 characters, the smart display gets 300.
+    </p>
+  </header>
+
+  <section class="panel">
+    <p class="eyebrow">The bench — all four rendered from the same data, live</p>
+    <div class="bench">
+      <div class="device device--watch">
+        <div class="device__cap"><span>Watch</span><span class="device__count" data-count="watch"></span></div>
+        <div class="bezel">
+          <div class="screen">
+            <div class="watch__clock" data-clock="watch"></div>
+            <div class="screen-text" data-out="watch"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="device device--phone">
+        <div class="device__cap"><span>Phone widget</span><span class="device__count" data-count="widget"></span></div>
+        <div class="bezel">
+          <div class="screen">
+            <div class="widget">
+              <div class="widget__head">Up next</div>
+              <div class="screen-text" data-out="widget"></div>
+            </div>
+            <div class="homebar"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="device device--audio">
+        <div class="device__cap"><span>Voice</span><span class="device__count" data-count="spoken"></span></div>
+        <div class="bezel">
+          <div class="screen">
+            <button class="speak" type="button" id="speakBtn">
+              <span id="speakIcon">▶</span><span id="speakLabel">Speak</span>
+            </button>
+            <div class="wave" id="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="screen-text" data-out="spoken"></div>
+            <div class="voice-note" id="voiceNote"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="device device--display">
+        <div class="device__cap"><span>Smart display</span><span class="device__count" data-count="display"></span></div>
+        <div class="bezel">
+          <div class="screen">
+            <div class="display__clock" data-clock="display"></div>
+            <div class="display__date" data-date="display"></div>
+            <div class="screen-text" data-out="display"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel scrub-row">
+    <p class="eyebrow">Time scrubber — bars are event density, the red marker is “now”</p>
+    <div class="strip" id="strip"></div>
+    <input type="range" id="nowSlider" min="-14" max="120" step="1" value="0"
+           aria-label="Move the current moment through the calendar" />
+    <div class="readout">
+      <span>now: <strong id="nowLabel"></strong></span>
+      <span id="shapeLabel"></span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <p class="eyebrow">Controls</p>
+    <div class="controls">
+      <label class="field">
+        <span>Dataset</span>
+        <select id="dataset"></select>
+      </label>
+      <label class="field">
+        <span>Display time zone</span>
+        <select id="timeZone">
+          <option>UTC</option>
+          <option>America/Los_Angeles</option>
+          <option>America/New_York</option>
+          <option>Europe/London</option>
+          <option>Europe/Sofia</option>
+          <option>Asia/Tokyo</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Horizon</span>
+        <select id="days">
+          <option value="7">7 days</option>
+          <option value="30">30 days</option>
+          <option value="90" selected>90 days</option>
+          <option value="365">365 days</option>
+        </select>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="priority" checked />
+        <span>Respect priority</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="panel editor">
+    <p class="eyebrow">Events — edit the JSON, the bench re-renders</p>
+    <textarea id="json" spellcheck="false" aria-label="Event data as JSON"></textarea>
+    <div class="status" id="status"></div>
+    <p class="note">
+      Each event needs a <code>name</code> and a <code>start</code> (ISO datetime, or a bare
+      <code>YYYY-MM-DD</code> for all-day). Optional: <code>seriesId</code> to mark a repeat,
+      <code>priority</code> or <code>tags</code> to make it break through, <code>link</code>, <code>end</code>.
+    </p>
+  </section>
+</div>
+
+<script>"use strict";var CalendarDigest=(()=>{var De=Object.defineProperty;var Ie=Object.getOwnPropertyDescriptor;var Qe=Object.getOwnPropertyNames;var Le=Object.prototype.hasOwnProperty;var qe=(e,t)=>{for(var r in t)De(e,r,{get:t[r],enumerable:!0})},Ge=(e,t,r,n)=>{if(t&&typeof t=="object"||typeof t=="function")for(let a of Qe(t))!Le.call(e,a)&&a!==r&&De(e,a,{get:()=>t[a],enumerable:!(n=Ie(t,a))||n.enumerable});return e};var Ye=e=>Ge(De({},"__esModule",{value:!0}),e);var it={};qe(it,{DEFAULT_TIERS:()=>xe,binEvents:()=>fe,briefDigest:()=>je,calendarDigest:()=>Ue,describeEvent:()=>ge,eventPriority:()=>G,formatDay:()=>J,formatTime:()=>z,relativeDuration:()=>q,resolveBin:()=>be,resolveEvents:()=>P,resolveOptions:()=>O,shapeDigest:()=>ye,summarizeSeries:()=>se,textDigest:()=>Ne,tieredWindow:()=>le,timelineDigest:()=>Pe,vaguePeriod:()=>ce,vaguePeriodShort:()=>pe});var $e=new Map;function Ke(e){let t=$e.get(e);return t||(t=new Intl.DateTimeFormat("en-US",{timeZone:e,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}),$e.set(e,t)),t}function C(e,t){let r={};for(let n of Ke(t).formatToParts(e))n.type!=="literal"&&(r[n.type]=Number(n.value));return{year:r.year,month:r.month,day:r.day,hour:r.hour,minute:r.minute,second:r.second}}function Ee(e,t){let r=C(e,t);return Date.UTC(r.year,r.month-1,r.day,r.hour,r.minute,r.second)-Math.floor(e.getTime()/1e3)*1e3}function X(e,t,r,n,a,o){let c=Date.UTC(e,t-1,r,n,a),i=c-Ee(new Date(c),o),m=c-Ee(new Date(i),o);return new Date(m)}function L(e,t){let r=C(e,t);return X(r.year,r.month,r.day,0,0,t)}function h(e,t,r){let n=C(e,r);return X(n.year,n.month,n.day+t,n.hour,n.minute,r)}function me(e,t,r){let n=C(e,t),a=(ie(n.year,n.month,n.day)-r+7)%7;return X(n.year,n.month,n.day-a,0,0,t)}function te(e,t){let r=C(e,t);return X(r.year,r.month,1,0,0,t)}function H(e,t,r){let n=C(e,r);return X(n.year,n.month+t,n.day,n.hour,n.minute,r)}function ie(e,t,r){return new Date(Date.UTC(e,t-1,r)).getUTCDay()}function x(e,t){let r=C(e,t);return Date.UTC(r.year,r.month-1,r.day)/864e5}function ae(e){return new Date(e*864e5).toISOString().slice(0,10)}function we(e,t){let r=C(e,t),n=a=>String(a).padStart(2,"0");return`${String(r.year).padStart(4,"0")}-${n(r.month)}-${n(r.day)}`}function O(e){return{now:e?.now===void 0?new Date:Se(e.now),timeZone:e?.timeZone??"UTC",weekStartsOn:e?.weekStartsOn??0}}function P(e,t){let r=e.map(n=>{let a=ke(n.start,t),o={source:n,start:a.date,allDay:a.allDay};return n.end!==void 0&&(o.end=ke(n.end,t).date),o});return r.sort((n,a)=>n.start.getTime()-a.start.getTime()),r}var Ve=/^(\d{4})-(\d{2})-(\d{2})$/;function ke(e,t){if(e instanceof Date)return{date:e,allDay:!1};let r=Ve.exec(e);return r?{date:X(Number(r[1]),Number(r[2]),Number(r[3]),0,0,t),allDay:!0}:{date:Se(e),allDay:!1}}function Se(e){let t=e instanceof Date?e:new Date(e);if(Number.isNaN(t.getTime()))throw new Error(`Invalid date: ${String(e)}`);return t}var Xe={today:"today",tomorrow:"tomorrow",restOfWeek:"later this week",thisWeek:"this week",nextWeek:"next week",restOfMonth:"later this month",thisMonth:"this month",nextMonth:"next month"};function be(e,t){let{now:r,timeZone:n,weekStartsOn:a}=t,o=(i,m)=>({name:e,label:Xe[e],start:i,end:m}),c=L(r,n);switch(e){case"today":return o(c,h(c,1,n));case"tomorrow":return o(h(c,1,n),h(c,2,n));case"thisWeek":{let i=me(r,n,a);return o(i,h(i,7,n))}case"nextWeek":{let i=me(r,n,a);return o(h(i,7,n),h(i,14,n))}case"restOfWeek":{let i=me(r,n,a);return o(r,h(i,7,n))}case"thisMonth":{let i=te(r,n);return o(i,H(i,1,n))}case"nextMonth":{let i=te(r,n);return o(H(i,1,n),H(i,2,n))}case"restOfMonth":{let i=te(r,n);return o(r,H(i,1,n))}}}function fe(e,t,r){let n=O(r),a=P(e,n.timeZone),o=t.map(i=>({bin:be(i,n),events:[]})),c=[];for(let i of a){let m=i.start.getTime(),l=o.find(({bin:u})=>m>=u.start.getTime()&&m<u.end.getTime());l?l.events.push(i):c.push(i)}return{bins:o,unbinned:c}}var xe=[{days:7,label:"the next 7 days"},{days:30,label:"the next 30 days"},{days:365,label:"the next year"}];function le(e,t){let r=O(t),n=[...t?.tiers??xe].sort((l,u)=>l.days-u.days),a=t?.days;a!==void 0&&(n=n.filter(u=>u.days<=a),(n.length>0?n[n.length-1].days:0)<a&&n.push({days:a}));let o=P(e,r.timeZone).filter(l=>l.start.getTime()>=r.now.getTime()&&(a===void 0||l.start.getTime()<h(r.now,a,r.timeZone).getTime())),c=[],i=r.now;for(let l of n){let u=h(r.now,l.days,r.timeZone),g=o.filter(p=>p.start.getTime()>=i.getTime()&&p.start.getTime()<u.getTime());c.push({label:l.label??`the next ${l.days} days`,start:i,end:u,count:g.length,events:g}),i=u}let m=o.filter(l=>l.start.getTime()>=i.getTime());return{tiers:c,beyond:{count:m.length,events:m}}}var Oe=new Map;function ne(e,t,r){let n=`${e}|${r}`,a=Oe.get(n);return a||(a=new Intl.DateTimeFormat("en-US",{timeZone:e,...t}),Oe.set(n,a)),a}function re(e){return e.replace(/[  ]/g," ")}function z(e,t){return re(ne(t,{hour:"numeric",minute:"2-digit"},"time").format(e))}function J(e,t){return re(ne(t,{weekday:"short",month:"short",day:"numeric"},"day").format(e))}function A(e,t){return re(ne(t,{month:"short",day:"numeric"},"monthday").format(e))}function Re(e,t){return re(ne(t,{month:"short",year:"numeric"},"monthyear").format(e))}function Ce(e,t){let r=C(e,t).day;return r<=10?"early":r<=20?"mid":"late"}function Be(e,t,r){let n=C(e,t).year;return n===C(r,t).year?"":` ${n}`}function ce(e,t,r){let n=re(ne(t,{month:"long"},"month-long").format(e));return`${Ce(e,t)} ${n}${Be(e,t,r)}`}function pe(e,t,r){let n=re(ne(t,{month:"short"},"month-short").format(e));return`${Ce(e,t)} ${n}${Be(e,t,r)}`}function q(e,t,r,n=!1){let a=Math.round(e/6e4);if(a<60)return`${a} min`;let o=Math.round(a/60),c=e/864e5;if(n||c<t){if(o<24)return`${o} hour${o===1?"":"s"}`;let m=Math.round(c);return`${m} day${m===1?"":"s"}`}if(c<r){let m=Math.round(c/7);return`${m} week${m===1?"":"s"}`}if(c<365){let m=Math.round(c/30.44);return`${m} month${m===1?"":"s"}`}let i=Math.round(c/365.25);return`${i} year${i===1?"":"s"}`}function ge(e,t,r,n,a){let o=e.source.name,c=a?.dateBoundaryDays??7,i=a?.vagueBoundaryDays??30,m=a?.forceSpecific??!1;if(a?.mode==="relative"){if(e.allDay){let u=x(e.start,t)-x(r,t);return u<=0?`${o} today`:u===1?`${o} tomorrow`:`${o} in ${q(u*864e5,c,i,m)}`}return`${o} in ${q(e.start.getTime()-r.getTime(),c,i,m)}`}if(!n)return e.allDay?`${o} (all day)`:`${o} at ${z(e.start,t)}`;if(m)return e.allDay?`${o} on ${J(e.start,t)}`:`${o} on ${J(e.start,t)} at ${z(e.start,t)}`;let l=x(e.start,t)-x(r,t);return l>=i?`${o} in ${ce(e.start,t,r)}`:e.allDay?`${o} on ${J(e.start,t)}`:l>=c?`${o} on ${J(e.start,t)}`:`${o} on ${J(e.start,t)} at ${z(e.start,t)}`}var He=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];function Me(e,t){let r=C(e.start,t);return ie(r.year,r.month,r.day)}function se(e,t){let r=new Map,n=[];for(let o of e){let c=o.source.seriesId;if(!c){n.push(o);continue}let i=r.get(c);i?i.push(o):r.set(c,[o])}let a=[];for(let[o,c]of r){if(c.length<2){n.push(...c);continue}let i={seriesId:o,name:c[0].source.name,cadence:Je(c,t),events:c},m=et(c,t);m!==void 0&&(i.time=m),a.push(i)}return n.sort((o,c)=>o.start.getTime()-c.start.getTime()),a.sort((o,c)=>o.events[0].start.getTime()-c.events[0].start.getTime()),{oneOffs:n,series:a}}function Je(e,t){let r=[...new Set(e.map(o=>x(o.start,t)))].sort((o,c)=>o-c),n=`${e.length}\xD7`;if(r.length<2)return n;let a=new Set;for(let o=1;o<r.length;o++)a.add(r[o]-r[o-1]);if([...a].every(o=>o>=28&&o<=31))return"monthly";if(a.size===1){let o=[...a][0];if(o===1)return"daily";let c=He[Me(e[0],t)];return o===7?`${c}s`:o===14?`every other ${c}`:`every ${o} days`}return Ze(e,r,a,t)?"every weekday":n}function Ze(e,t,r,n){if(![...r].every(i=>i===1||i===3))return!1;let a=new Set(e.map(i=>Me(i,n)));if([...a].some(i=>i===0||i===6))return!1;let o=[...a].sort((i,m)=>i-m);return o.every((i,m)=>m===0||i===o[m-1]+1)&&a.size>=4}function et(e,t){return e.some(n=>n.allDay)?void 0:new Set(e.map(n=>{let a=C(n.start,t);return a.hour*60+a.minute})).size===1?z(e[0].start,t):void 0}function ye(e,t){let r=O(t),n=r.timeZone,a=t?.days??90,o=t?.minQuietDays??2,c=r.now,i=h(L(r.now,n),a,n),m=P(e,n).filter(v=>v.start.getTime()>=c.getTime()&&v.start.getTime()<i.getTime()),{oneOffs:l,series:u}=se(m,n),g=t?.includeSeries?m:l,p=t?.includeSeries?[]:u,w=x(r.now,n),M=w+a,k=new Map;for(let v of g){let $=x(v.start,n),W=k.get($);W?W.push(v):k.set($,[v])}let T=[...k.keys()].sort((v,$)=>v-$),j=[],B=[],S=[],F=()=>{if(S.length===0)return;let v=S[0],$=S[S.length-1],W=S.flatMap(ue=>k.get(ue)),Z=$-v+1;j.push({startDate:ae(v),endDate:ae($),days:Z,count:W.length,intensity:W.length/Z,events:W}),B.push({first:v,last:$}),S=[]};for(let v of T){let $=S[S.length-1];$!==void 0&&v-$-1>=o&&F(),S.push(v)}F();let R=[],D=(v,$)=>{let W=$-v;W>=o&&R.push({startDate:ae(v),endDate:ae($-1),days:W})},U=w;for(let v of B)D(U,v.first),U=v.last+1;D(U,M);let de={horizonStart:c,horizonEnd:i,leadingQuietDays:T.length>0?T[0]-w:a,clusters:j,quietStretches:R,background:p};return g.length>0&&(de.nextEvent=g[0]),de}function G(e,t){let r=e.source.priority??0;for(let n of e.source.tags??[]){let a=t?.[n];a!==void 0&&a>r&&(r=a)}return r}var tt={watch:40,banner:80,widget:140,spoken:170,display:300},nt=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],_={opening:0,breakThrough:1,normal:2,series:3,more:9};function je(e,t){let r=O(t),n=r.timeZone,a=typeof t?.budget=="number"?t.budget:tt[t?.budget??"widget"],o=a<=80,c=t?.burstThreshold??3,i=t?.breakThroughAt??2,m=t?.days??90,l=ye(e,t),u=x(r.now,n),g=s=>new Date(s*864e5),p=s=>{let d=s-u;return d===0?"today":d===1?"tomorrow":d<=6?nt[g(s).getUTCDay()]:A(g(s),"UTC")},w=(s,d)=>{if(d-u<=6)return`${p(s)}\u2013${p(d)}`;let f=g(s),y=g(d);return f.getUTCMonth()===y.getUTCMonth()?`${A(f,"UTC")}\u2013${y.getUTCDate()}`:`${A(f,"UTC")} \u2013 ${A(y,"UTC")}`},M=s=>{if(s.allDay)return;let d=Math.round((s.start.getTime()-r.now.getTime())/6e4);return d>=0&&d<90?d:void 0},k=t?.dateBoundaryDays??7,T=t?.vagueBoundaryDays??30,j=t?.mode??"calendar",B=s=>G(s,t?.tagPriorities),S=(s,d)=>{let f=s-u;return f<=0?"today":f===1?"tomorrow":`in ${q(f*864e5,k,T,d)}`},F=s=>{let d=M(s);if(d!==void 0)return`in ${d} min`;let f=B(s)>0,y=x(s.start,n),N=y-u;if(j==="relative")return s.allDay?S(y,f):`in ${q(s.start.getTime()-r.now.getTime(),k,T,f)}`;if(!f&&N>=T)return pe(g(y),"UTC",g(u));let b=p(y);return s.allDay||!f&&N>=k?b:`${b} ${z(s.start,n).replace(":00 "," ")}`},R=s=>{let d=M(s);if(d!==void 0)return`in ${d} min`;let f=B(s)>0,y=x(s.start,n),N=y-u;if(j==="relative")return s.allDay?S(y,f):`in ${q(s.start.getTime()-r.now.getTime(),k,T,f)}`;if(!f&&N>=T)return`in ${ce(g(y),"UTC",g(u))}`;let b=p(y),Y=N<=1?b:`on ${b}`;return s.allDay||!f&&N>=k?Y:`${Y} at ${z(s.start,n)}`},D=[],U=0,de=l.clusters.reduce((s,d)=>s+d.count,0)+l.background.reduce((s,d)=>s+d.events.length,0);if(l.clusters.length===0)l.background.length>0?D.push({kind:"quiet",rank:_.opening,index:U++,prose:["just the usual"],compact:["Usual only"],events:[]}):D.push({kind:"quiet",rank:_.opening,index:U++,prose:[`no events in the next ${m} days`],compact:[`Free ${m}d`],events:[]});else if(l.leadingQuietDays>=2){let s=x(l.clusters[0].events[0].start,n),d=S(s,!1);D.push({kind:"quiet",rank:_.opening,index:U++,prose:[j==="relative"?`nothing ${d}`:`nothing until ${p(s)}`],compact:[j==="relative"?`Quiet ${d}`:`Quiet til ${p(s)}`],events:[]})}else{let s=l.nextEvent,d=s.source.name;D.push({kind:"next",rank:_.opening,index:U++,prose:[`next up: ${d} ${R(s)}`,`next: ${d} ${F(s)}`],compact:[`Next: ${d} ${F(s)}`,`${d} ${F(s)}`],events:[s]})}let v=D[0].kind==="next",$=(s,d)=>{let f=F(s),y=j==="relative"?f.replace(/^in /,""):p(x(s.start,n));return{kind:"event",rank:d,index:U++,prose:[`${s.source.name} ${R(s)}`,`${s.source.name} ${f}`],compact:[`${s.source.name} ${f}`,`${s.source.name} ${y}`],events:[s]}},W=0,Z=new Set;for(let s of l.clusters){let d=s.events.filter(f=>B(f)>=i&&!(v&&f===l.nextEvent)).sort((f,y)=>B(y)-B(f)||f.start.getTime()-y.start.getTime());for(let f of d)Z.add(f),D.push($(f,_.breakThrough));if(s.count>=c){let f=x(s.events[0].start,n),y=x(s.events[s.events.length-1].start,n),N=w(f,y),b=s.events.filter(K=>!Z.has(K)&&!(v&&K===l.nextEvent)),Y=b.reduce((K,oe)=>B(oe)>B(K)?oe:K,b[0]??s.events[0]);D.push({kind:"burst",rank:_.normal,index:U++,prose:[`a busy stretch ${N}: ${s.count} events, incl. ${Y.source.name}`,`${s.count} events ${N}`],compact:[`${s.count} in ${s.days}d`],events:s.events})}else for(let f of s.events)if(!(Z.has(f)||v&&f===l.nextEvent)){if(W>=8)break;W+=1,D.push($(f,_.normal))}}for(let s of l.background){let d=s.time===void 0?s.cadence:`${s.cadence} at ${s.time}`;D.push({kind:"series",rank:_.series,index:U++,prose:[`${s.name} (${d})`],compact:[`${s.name} ${s.cadence}`],events:s.events})}let ue=(s,d)=>s===void 0?"":o?" \xB7 ":d==="more"?", and ":d==="series"?s==="quiet"?": ":", plus ":s==="quiet"?", then ":", ",ve=s=>s.reduce((d,f,y)=>d+ue(y>0?s[y-1].cand.kind:void 0,f.cand.kind).length+f.text.length,0),ee=(s,d)=>[...s,d].sort((f,y)=>f.cand.index-y.cand.index),Te=!o&&j==="relative"?"Times relative to now \u2014 ":"",he=(o?a:a-1)-Te.length,E=[],_e=[...D].sort((s,d)=>s.rank-d.rank||s.index-d.index);for(let s of _e){let d=o?s.compact:s.prose,f=d.find(y=>ve(ee(E,{cand:s,text:y}))<=he);f===void 0&&(E.length===0||s.rank<=_.breakThrough)&&(f=d[d.length-1]),f!==void 0&&(E=ee(E,{cand:s,text:f}))}let Fe=()=>{let s=new Set;for(let d of E)for(let f of d.cand.events)s.add(f);return s.size},ze=A(g(u+m-1),"UTC");for(;;){let s=de-Fe();if(s<=0)break;let d={kind:"more",rank:_.more,index:Number.MAX_SAFE_INTEGER,prose:[j==="relative"?`${s} more in the next ${m} days`:`${s} more by ${ze}`,`${s} more`],compact:[`+${s}`],events:[]},f=o?d.compact:d.prose,y=f.find(b=>ve(ee(E,{cand:d,text:b}))<=he);if(y!==void 0){E=ee(E,{cand:d,text:y});break}let N=E.filter(b=>b.cand.rank>_.breakThrough);if(N.length>0){let b=N.reduce((Q,V)=>V.cand.rank>Q.cand.rank||V.cand.rank===Q.cand.rank&&V.cand.index>Q.cand.index?V:Q),Y=o?b.cand.compact:b.cand.prose,K=Y.slice(Y.indexOf(b.text)+1),oe=!1;for(let Q of K){b.text=Q;let V=f.find(Ae=>ve(ee(E,{cand:d,text:Ae}))<=he);if(V!==void 0){E=ee(E,{cand:d,text:V}),oe=!0;break}}if(oe)break;E=E.filter(Q=>Q!==b);continue}break}let I="";return E.forEach((s,d)=>{I+=ue(d>0?E[d-1].cand.kind:void 0,s.cand.kind)+s.text}),o||(I=I.charAt(0).toUpperCase()+I.slice(1),I.endsWith(".")||(I+=".")),I=Te+I,{text:I,fragments:E.map(s=>({kind:s.cand.kind,text:s.text,events:s.cand.events})),budget:a}}var We=864e5;function Ne(e,t){let r=t?.maxSentences??3,n=t?.maxNamed??3,a=t?.timeZone??"UTC",o=O(t).now,c=[];if(t?.bins){let{bins:u}=fe(e,t.bins,t);for(let{bin:g,events:p}of u)c.push({phrase:g.label,events:p,spansDays:g.end.getTime()-g.start.getTime()>1.5*We,more:!1})}else{let u=le(e,t),g=!0;for(let p of u.tiers)c.push({phrase:`in ${p.label}`,events:p.events,spansDays:p.end.getTime()-p.start.getTime()>1.5*We,more:!g&&p.count>0}),p.count>0&&(g=!1);c.push({phrase:"after that",events:u.beyond.events,spansDays:!0,more:!g})}let i=[];for(let u of c){if(i.length>=r)break;u.events.length!==0&&i.push({text:rt(u.events,u.phrase,u.more,u.spansDays,a,o,n,t),events:u.events})}if(i.length===0)return{text:"No upcoming events.",sentences:[]};let m=i.map(u=>u.text).join(" ");return{text:t?.mode==="relative"?`Times below are relative to now. ${m}`:m,sentences:i}}function rt(e,t,r,n,a,o,c,i){let m=e.length,l=m===1?"event":"events",u=r?`${m} more ${l}`:`${m} ${l}`,g=i?.tagPriorities,{oneOffs:p,series:w}=se(e,a),k=[...p].sort((R,D)=>G(D,g)-G(R,g)||R.start.getTime()-D.start.getTime()).slice(0,c),T=w.slice(0,c),j=k.length+T.reduce((R,D)=>R+D.events.length,0),B=m-j,S=[...k.map(R=>ge(R,a,o,n,{...i?.dateBoundaryDays!==void 0?{dateBoundaryDays:i.dateBoundaryDays}:{},...i?.vagueBoundaryDays!==void 0?{vagueBoundaryDays:i.vagueBoundaryDays}:{},...i?.mode!==void 0?{mode:i.mode}:{},forceSpecific:G(R,g)>0})),...T.map(R=>st(R))];B>0&&S.push(`${B} more`);let F=`${u} ${t}: ${ot(S)}.`;return F.charAt(0).toUpperCase()+F.slice(1)}function st(e){let t=e.time===void 0?e.cadence:`${e.cadence} at ${e.time}`;return`${e.name} (${t})`}function ot(e){return e.length<=1?e[0]??"":e.length===2?`${e[0]} and ${e[1]}`:`${e.slice(0,-1).join(", ")}, and ${e[e.length-1]}`}function Pe(e,t){let r=O(t),n=r.timeZone,a=t?.days??90,o=t?.granularity??(a<=31?"day":a<=180?"week":"month"),c=L(r.now,n),i=h(c,a,n),m=P(e,n),l=[],u=c;for(;u.getTime()<i.getTime();){let p,w;if(o==="day")p=h(u,1,n),w=A(u,n);else if(o==="week"){p=h(u,7,n);let T=p.getTime()<i.getTime()?p:i;w=`${A(u,n)} \u2013 ${A(h(T,-1,n),n)}`}else p=H(te(u,n),1,n),w=Re(u,n);let M=p.getTime()<i.getTime()?p:i,k=m.filter(T=>T.start.getTime()>=u.getTime()&&T.start.getTime()<M.getTime());l.push({start:u,end:M,label:w,count:k.length,events:k}),u=M}let g=l.reduce((p,w)=>Math.max(p,w.count),0);return{start:c,end:i,granularity:o,buckets:l,maxCount:g}}function Ue(e,t){let r=O(t),n=r.timeZone,a=t?.days??30,o=P(e,n),c=[],i=L(r.now,n);for(let m=0;m<a;m++){let l=h(i,1,n),u=we(i,n),[g,p,w]=u.split("-").map(Number);c.push({date:u,weekday:ie(g,p,w),events:o.filter(M=>M.start.getTime()>=i.getTime()&&M.start.getTime()<l.getTime())}),i=l}return{days:c}}return Ye(it);})();</script>
+<script>
+(function () {
+  "use strict";
+  var DIGEST = window.CalendarDigest;
+  var FIXTURES = {"quiet-then-burst":{"title":"Quiet week, then a burst","blurb":"a quiet stretch, then 6 events in 3 days","anchor":"2026-07-09T16:00:00.000Z","timeZone":"America/New_York","events":[{"name":"Dentist","start":"2026-07-14T15:00:00.000Z"},{"name":"Board meeting","start":"2026-07-14T18:00:00.000Z"},{"name":"Recital","start":"2026-07-15T22:00:00.000Z"},{"name":"Party","start":"2026-07-15T23:00:00.000Z"},{"name":"Hike","start":"2026-07-16T14:00:00.000Z"},{"name":"Brunch","start":"2026-07-16T15:00:00.000Z"}]},"critical-outlier":{"title":"One critical flight","blurb":"sparse, plus a priority flight 7 weeks out","anchor":"2026-07-09T16:00:00.000Z","timeZone":"America/New_York","events":[{"name":"Dinner with Sam","start":"2026-07-15T23:00:00.000Z"},{"name":"Car service","start":"2026-07-25T14:00:00.000Z"},{"name":"Book club","start":"2026-08-05T23:00:00.000Z"},{"name":"Flight to Tokyo","start":"2026-08-30T13:00:00.000Z","priority":2,"tags":["travel"]},{"name":"Haircut","start":"2026-08-20T17:00:00.000Z"},{"name":"Dinner party","start":"2026-09-10T23:00:00.000Z"},{"name":"Movie night","start":"2026-09-25T23:00:00.000Z"}]},"recurring-heavy":{"title":"Buried by repeats","blurb":"daily + weekly series hiding the one-offs","anchor":"2026-07-09T16:00:00.000Z","timeZone":"America/New_York","events":[{"name":"Call mom","start":"2026-07-10T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-11T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-12T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-13T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-14T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-15T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-16T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-17T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-18T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-19T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-20T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-21T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-22T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-23T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-24T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-25T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-26T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-27T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-28T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-29T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-30T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-07-31T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-01T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-02T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-03T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-04T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-05T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-06T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-07T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-08T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-09T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-10T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-11T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-12T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-13T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-14T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-15T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-16T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-17T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-18T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-19T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-20T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-21T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-22T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-23T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-24T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-25T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-26T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-27T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-28T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-29T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-30T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-08-31T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-09-01T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-09-02T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-09-03T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-09-04T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-09-05T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-09-06T17:00:00.000Z","seriesId":"mom"},{"name":"Call mom","start":"2026-09-07T17:00:00.000Z","seriesId":"mom"},{"name":"Team sync","start":"2026-07-13T14:00:00.000Z","seriesId":"sync"},{"name":"Team sync","start":"2026-07-20T14:00:00.000Z","seriesId":"sync"},{"name":"Team sync","start":"2026-07-27T14:00:00.000Z","seriesId":"sync"},{"name":"Team sync","start":"2026-08-03T14:00:00.000Z","seriesId":"sync"},{"name":"Team sync","start":"2026-08-10T14:00:00.000Z","seriesId":"sync"},{"name":"Team sync","start":"2026-08-17T14:00:00.000Z","seriesId":"sync"},{"name":"Team sync","start":"2026-08-24T14:00:00.000Z","seriesId":"sync"},{"name":"Team sync","start":"2026-08-31T14:00:00.000Z","seriesId":"sync"},{"name":"Team sync","start":"2026-09-07T14:00:00.000Z","seriesId":"sync"},{"name":"Team sync","start":"2026-09-14T14:00:00.000Z","seriesId":"sync"},{"name":"Team sync","start":"2026-09-21T14:00:00.000Z","seriesId":"sync"},{"name":"Team sync","start":"2026-09-28T14:00:00.000Z","seriesId":"sync"},{"name":"Dentist","start":"2026-07-16T15:00:00.000Z"},{"name":"Haircut","start":"2026-07-20T17:00:00.000Z"},{"name":"Flight to Denver","start":"2026-08-05T12:00:00.000Z","tags":["travel"]},{"name":"Annual checkup","start":"2026-09-02T14:00:00.000Z"}]},"overloaded-conference":{"title":"Conference week","blurb":"a 5-day, 20-event pile-up","anchor":"2026-07-09T16:00:00.000Z","timeZone":"America/New_York","events":[{"name":"Keynote (Day 1)","start":"2026-08-03T13:00:00.000Z"},{"name":"Workshop A (Day 1)","start":"2026-08-03T15:00:00.000Z"},{"name":"Workshop B (Day 1)","start":"2026-08-03T18:00:00.000Z"},{"name":"Sponsor demo (Day 1)","start":"2026-08-03T20:00:00.000Z"},{"name":"Keynote (Day 2)","start":"2026-08-04T13:00:00.000Z"},{"name":"Workshop A (Day 2)","start":"2026-08-04T15:00:00.000Z"},{"name":"Workshop B (Day 2)","start":"2026-08-04T18:00:00.000Z"},{"name":"Sponsor demo (Day 2)","start":"2026-08-04T20:00:00.000Z"},{"name":"Keynote (Day 3)","start":"2026-08-05T13:00:00.000Z"},{"name":"Workshop A (Day 3)","start":"2026-08-05T15:00:00.000Z"},{"name":"Workshop B (Day 3)","start":"2026-08-05T18:00:00.000Z"},{"name":"Sponsor demo (Day 3)","start":"2026-08-05T20:00:00.000Z"},{"name":"Keynote (Day 4)","start":"2026-08-06T13:00:00.000Z"},{"name":"Workshop A (Day 4)","start":"2026-08-06T15:00:00.000Z"},{"name":"Workshop B (Day 4)","start":"2026-08-06T18:00:00.000Z"},{"name":"Sponsor demo (Day 4)","start":"2026-08-06T20:00:00.000Z"},{"name":"Keynote (Day 5)","start":"2026-08-07T13:00:00.000Z"},{"name":"Workshop A (Day 5)","start":"2026-08-07T15:00:00.000Z"},{"name":"Workshop B (Day 5)","start":"2026-08-07T18:00:00.000Z"},{"name":"Sponsor demo (Day 5)","start":"2026-08-07T20:00:00.000Z"},{"name":"Dentist","start":"2026-07-13T15:00:00.000Z"},{"name":"Concert","start":"2026-09-10T23:00:00.000Z"}]},"empty":{"title":"Nothing at all","blurb":"an empty calendar","anchor":"2026-07-09T16:00:00.000Z","timeZone":"America/New_York","events":[]}};
+  var DAY = 86400000;
+  var PRESETS = ["watch", "widget", "spoken", "display"];
+  var TAG_PRIORITIES = { travel: 2, medical: 2 };
+
+  var els = {
+    dataset: document.getElementById("dataset"),
+    timeZone: document.getElementById("timeZone"),
+    days: document.getElementById("days"),
+    priority: document.getElementById("priority"),
+    slider: document.getElementById("nowSlider"),
+    strip: document.getElementById("strip"),
+    nowLabel: document.getElementById("nowLabel"),
+    shapeLabel: document.getElementById("shapeLabel"),
+    json: document.getElementById("json"),
+    status: document.getElementById("status"),
+    speakBtn: document.getElementById("speakBtn"),
+    speakIcon: document.getElementById("speakIcon"),
+    speakLabel: document.getElementById("speakLabel"),
+    wave: document.getElementById("wave"),
+    voiceNote: document.getElementById("voiceNote")
+  };
+
+  var state = { id: "quiet-then-burst", events: [], anchor: 0, offset: 0 };
+
+  Object.keys(FIXTURES).forEach(function (id) {
+    var o = document.createElement("option");
+    o.value = id;
+    o.textContent = FIXTURES[id].title;
+    els.dataset.appendChild(o);
+  });
+
+  function loadDataset(id) {
+    var f = FIXTURES[id];
+    state.id = id;
+    state.anchor = Date.parse(f.anchor);
+    state.events = f.events;
+    els.json.value = JSON.stringify(f.events, null, 2);
+    els.timeZone.value = f.timeZone;
+    els.dataset.value = id;
+    els.status.textContent = f.events.length + " events loaded — " + f.blurb;
+    els.status.classList.remove("is-bad");
+    render();
+  }
+
+  function nowMs() { return state.anchor + state.offset * DAY; }
+
+  function activeEvents() {
+    if (els.priority.checked) return state.events;
+    // Strip every importance signal so the contrast is honest.
+    return state.events.map(function (e) {
+      var c = {};
+      for (var k in e) if (k !== "priority" && k !== "tags") c[k] = e[k];
+      return c;
+    });
+  }
+
+  function baseOptions() {
+    var o = {
+      now: new Date(nowMs()),
+      timeZone: els.timeZone.value,
+      days: Number(els.days.value)
+    };
+    if (els.priority.checked) o.tagPriorities = TAG_PRIORITIES;
+    return o;
+  }
+
+  function fmt(ms, opts) {
+    return new Intl.DateTimeFormat("en-US", Object.assign({ timeZone: els.timeZone.value }, opts)).format(new Date(ms));
+  }
+
+  function renderStrip() {
+    // Fixed terrain (anchor-14 → anchor+120) so the marker moves across it.
+    var startMs = state.anchor - 14 * DAY;
+    var span = 134;
+    var tl = DIGEST.timelineDigest(activeEvents(), {
+      now: new Date(startMs), timeZone: els.timeZone.value, days: span
+    });
+    els.strip.textContent = "";
+    var max = Math.max(tl.maxCount, 1);
+    var nowPos = ((nowMs() - startMs) / (span * DAY)) * 100;
+    tl.buckets.forEach(function (b) {
+      var bar = document.createElement("div");
+      bar.className = "strip__bar" + (b.count >= max * 0.6 && b.count > 0 ? " is-hot" : "");
+      bar.style.height = (b.count === 0 ? 3 : 12 + (b.count / max) * 88) + "%";
+      bar.title = b.label + ": " + b.count + (b.count === 1 ? " event" : " events");
+      els.strip.appendChild(bar);
+    });
+    var marker = document.createElement("div");
+    marker.className = "strip__now";
+    marker.style.left = Math.max(0, Math.min(100, nowPos)) + "%";
+    els.strip.appendChild(marker);
+  }
+
+  function render() {
+    var events = activeEvents();
+    var opts = baseOptions();
+
+    PRESETS.forEach(function (preset) {
+      var brief = DIGEST.briefDigest(events, Object.assign({}, opts, { budget: preset }));
+      var out = document.querySelector('[data-out="' + preset + '"]');
+      var count = document.querySelector('[data-count="' + preset + '"]');
+      out.textContent = brief.text;
+      count.textContent = brief.text.length + "/" + brief.budget;
+      count.classList.toggle("is-full", brief.text.length > brief.budget * 0.9);
+    });
+
+    document.querySelector('[data-clock="watch"]').textContent = fmt(nowMs(), { hour: "numeric", minute: "2-digit" });
+    document.querySelector('[data-clock="display"]').textContent = fmt(nowMs(), { hour: "numeric", minute: "2-digit" });
+    document.querySelector('[data-date="display"]').textContent = fmt(nowMs(), { weekday: "long", month: "long", day: "numeric" });
+
+    els.nowLabel.textContent = fmt(nowMs(), { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+
+    var shape = DIGEST.shapeDigest(events, opts);
+    var bits = [];
+    bits.push(shape.clusters.length + (shape.clusters.length === 1 ? " cluster" : " clusters"));
+    if (shape.leadingQuietDays > 0) bits.push(shape.leadingQuietDays + "d quiet ahead");
+    if (shape.background.length) {
+      bits.push(shape.background.map(function (s) { return s.name + " · " + s.cadence; }).join(" / "));
+    }
+    els.shapeLabel.textContent = bits.join("  ·  ");
+
+    renderStrip();
+  }
+
+  function applyJson() {
+    var text = els.json.value;
+    try {
+      var parsed = JSON.parse(text);
+      if (!Array.isArray(parsed)) throw new Error("Top level must be an array of events");
+      state.events = parsed;
+      els.status.textContent = parsed.length + (parsed.length === 1 ? " event" : " events") + " — rendering live";
+      els.status.classList.remove("is-bad");
+      render();
+    } catch (err) {
+      els.status.textContent = "Can't read that JSON: " + err.message;
+      els.status.classList.add("is-bad");
+    }
+  }
+
+  var jsonTimer;
+  els.json.addEventListener("input", function () {
+    clearTimeout(jsonTimer);
+    jsonTimer = setTimeout(applyJson, 350);
+  });
+  els.dataset.addEventListener("change", function () { loadDataset(els.dataset.value); });
+  els.slider.addEventListener("input", function () { state.offset = Number(els.slider.value); render(); });
+  els.timeZone.addEventListener("change", render);
+  els.days.addEventListener("change", render);
+  els.priority.addEventListener("change", render);
+
+  /* ---- speech: browser-native, no key, no network ---- */
+  var synth = window.speechSynthesis;
+  var speaking = false;
+
+  function pickVoice() {
+    if (!synth) return null;
+    var voices = synth.getVoices();
+    if (!voices.length) return null;
+    return voices.filter(function (v) { return /^en[-_]US/.test(v.lang); })[0] ||
+           voices.filter(function (v) { return /^en/.test(v.lang); })[0] || voices[0];
+  }
+
+  function setSpeakUI(on) {
+    speaking = on;
+    els.speakIcon.textContent = on ? "■" : "▶";
+    els.speakLabel.textContent = on ? "Stop" : "Speak";
+    els.wave.classList.toggle("is-live", on);
+  }
+
+  if (!synth) {
+    els.speakBtn.disabled = true;
+    els.voiceNote.textContent = "This browser has no speech synthesis.";
+  } else {
+    var noteVoice = function () {
+      var v = pickVoice();
+      els.voiceNote.textContent = v ? "voice: " + v.name : "no voices installed";
+    };
+    noteVoice();
+    synth.addEventListener("voiceschanged", noteVoice);
+
+    els.speakBtn.addEventListener("click", function () {
+      if (speaking) { synth.cancel(); setSpeakUI(false); return; }
+      var text = document.querySelector('[data-out="spoken"]').textContent;
+      if (!text) return;
+      synth.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      var v = pickVoice();
+      if (v) { u.voice = v; u.lang = v.lang; }
+      u.rate = 1;
+      u.onend = function () { setSpeakUI(false); };
+      u.onerror = function () { setSpeakUI(false); };
+      setSpeakUI(true);
+      synth.speak(u);
+    });
+    window.addEventListener("beforeunload", function () { synth.cancel(); });
+  }
+
+  loadDataset("quiet-then-burst");
+})();
+</script>

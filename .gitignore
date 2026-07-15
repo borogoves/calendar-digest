@@ -7,3 +7,4 @@ coverage/
 .env.*
 examples/live/credentials.json
 examples/live/token.json
+examples/web/.bundle.tmp.js

@@ -569,6 +569,19 @@ describe("briefDigest with priorities", () => {
     expect(brief.text.length).toBeLessThanOrEqual(45); // small, documented overflow — never silent omission
   });
 
+  it("does not repeat the opening's event in the burst headline", () => {
+    // "now" sits inside the stretch, so the opening names the next event;
+    // the burst must headline a different one.
+    const brief = briefDigest(burst, {
+      ...NY,
+      now: "2026-07-14T17:30:00Z", // 1:30 PM, half an hour before Board meeting
+      budget: "spoken",
+    });
+    expect(brief.text).toContain("Next up: board meeting");
+    expect(brief.text).not.toContain("incl. board meeting");
+    expect(brief.text.match(/board meeting/g)).toHaveLength(1);
+  });
+
   it("keeps chronological display order when everything fits", () => {
     const brief = briefDigest([...burst, flight], { ...NY, budget: "display" });
     expect(brief.text).toBe(

@@ -1,0 +1,746 @@
+<title>calendar-digest — device lab</title>
+
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --surface-sunk: #EDF0F4;
+    --text: #171B22;
+    --text-dim: #5A6478;
+    --border: #DFE3EA;
+    --signal: #C77A00;
+    --signal-screen: #FFB020;
+    --alert: #D6402E;
+    --calm: #7C8AA5;
+
+    --ink: #0E1116;
+    --graphite: #2B313C;
+
+    --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+    --step-0: 0.8125rem;
+    --step-1: 0.9375rem;
+    --step-2: 1.25rem;
+    --step-3: 1.75rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0E1116;
+      --surface: #171B22;
+      --surface-sunk: #10141A;
+      --text: #E8ECF2;
+      --text-dim: #8B97AC;
+      --border: #2A303B;
+      --signal: #FFB020;
+      --alert: #FF6B5B;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1116;
+    --surface: #171B22;
+    --surface-sunk: #10141A;
+    --text: #E8ECF2;
+    --text-dim: #8B97AC;
+    --border: #2A303B;
+    --signal: #FFB020;
+    --alert: #FF6B5B;
+  }
+  :root[data-theme="light"] {
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --surface-sunk: #EDF0F4;
+    --text: #171B22;
+    --text-dim: #5A6478;
+    --border: #DFE3EA;
+    --signal: #C77A00;
+    --alert: #D6402E;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: var(--step-1);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  /* ---- masthead ---- */
+  .masthead { display: flex; flex-direction: column; gap: 8px; }
+  .wordmark {
+    font-family: var(--font-mono);
+    font-size: var(--step-3);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .wordmark em { color: var(--signal); font-style: normal; }
+  .thesis {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--text-dim);
+    text-wrap: balance;
+  }
+
+  /* ---- shared panel ---- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-dim);
+    margin: 0 0 12px;
+  }
+
+  /* ---- bench ---- */
+  .bench {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: flex-start;
+  }
+  .device { display: flex; flex-direction: column; gap: 9px; }
+  .device__cap {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: baseline;
+  }
+  .device__count { font-variant-numeric: tabular-nums; }
+  .device__count.is-full { color: var(--signal); }
+
+  /* screens stay dark in both themes: they are objects, not chrome */
+  .screen {
+    background: var(--ink);
+    color: #F2F5F9;
+    font-family: var(--font-ui);
+    overflow: hidden;
+  }
+  .screen-text { white-space: normal; overflow-wrap: break-word; }
+
+  .bezel {
+    background: var(--graphite);
+    border-radius: 22px;
+    padding: 9px;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 6px 18px rgba(0,0,0,0.22);
+  }
+
+  /* watch */
+  .device--watch { width: 186px; }
+  .device--watch .bezel { border-radius: 30px; }
+  .device--watch .screen {
+    border-radius: 22px;
+    min-height: 168px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .watch__clock {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--signal-screen);
+    font-variant-numeric: tabular-nums;
+  }
+  .device--watch .screen-text {
+    font-size: 0.8125rem;
+    line-height: 1.32;
+    font-weight: 500;
+  }
+
+  /* phone */
+  .device--phone { width: 232px; }
+  .device--phone .bezel { border-radius: 26px; }
+  .device--phone .screen {
+    border-radius: 18px;
+    min-height: 168px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .homebar {
+    height: 3px;
+    width: 62px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.28);
+    margin: auto auto 0;
+  }
+  .widget {
+    background: rgba(255,255,255,0.09);
+    border-radius: 13px;
+    padding: 11px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .widget__head {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--signal-screen);
+    font-weight: 700;
+  }
+  .device--phone .screen-text { font-size: 0.75rem; line-height: 1.38; }
+
+  /* voice */
+  .device--audio { width: 258px; }
+  .device--audio .screen {
+    border-radius: 16px;
+    min-height: 168px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .speak {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    background: var(--signal-screen);
+    color: #1A1206;
+    border: none;
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .speak:hover { filter: brightness(1.08); }
+  .speak:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .speak[disabled] { opacity: 0.45; cursor: not-allowed; }
+  .wave { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
+  .wave i {
+    flex: 1;
+    background: var(--signal-screen);
+    border-radius: 1px;
+    height: 15%;
+    opacity: 0.32;
+  }
+  .wave.is-live i { animation: bounce 0.9s ease-in-out infinite; opacity: 1; }
+  .wave.is-live i:nth-child(2) { animation-delay: 0.12s; }
+  .wave.is-live i:nth-child(3) { animation-delay: 0.24s; }
+  .wave.is-live i:nth-child(4) { animation-delay: 0.36s; }
+  .wave.is-live i:nth-child(5) { animation-delay: 0.48s; }
+  .wave.is-live i:nth-child(6) { animation-delay: 0.6s; }
+  .wave.is-live i:nth-child(7) { animation-delay: 0.72s; }
+  @keyframes bounce { 0%,100% { height: 15%; } 50% { height: 100%; } }
+  .device--audio .screen-text {
+    font-size: 0.75rem;
+    line-height: 1.42;
+    color: #C9D2DE;
+  }
+  .voice-note {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    color: var(--text-dim);
+  }
+
+  /* display */
+  .device--display { flex: 1; min-width: 300px; }
+  .device--display .bezel { border-radius: 14px; }
+  .device--display .screen {
+    border-radius: 8px;
+    min-height: 168px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .display__clock {
+    font-size: 1.875rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .display__date {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--signal-screen);
+  }
+  .device--display .screen-text { font-size: 0.9375rem; line-height: 1.5; max-width: 54ch; }
+
+  /* ---- scrubber ---- */
+  .strip {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 54px;
+    padding: 0 1px;
+    background: var(--surface-sunk);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .strip__bar {
+    flex: 1;
+    background: var(--calm);
+    border-radius: 2px 2px 0 0;
+    min-height: 2px;
+    opacity: 0.5;
+  }
+  .strip__bar.is-hot { background: var(--signal); opacity: 1; }
+  .strip__now {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--alert);
+    pointer-events: none;
+  }
+  .strip__now::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--alert);
+  }
+  .scrub-row { display: flex; flex-direction: column; gap: 10px; }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--alert);
+    cursor: grab;
+  }
+  input[type="range"]:active { cursor: grabbing; }
+  input[type="range"]:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+  .readout {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+  .readout strong { color: var(--text); font-weight: 600; }
+
+  /* ---- controls ---- */
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    gap: 14px;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field > span {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+  select, textarea {
+    font-family: var(--font-mono);
+    font-size: var(--step-0);
+    color: var(--text);
+    background: var(--surface-sunk);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 1px;
+  }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: var(--step-0);
+    align-self: end;
+    padding-bottom: 8px;
+  }
+  .check input { accent-color: var(--signal); width: 15px; height: 15px; }
+
+  /* ---- editor ---- */
+  .editor { display: flex; flex-direction: column; gap: 8px; }
+  textarea { min-height: 168px; resize: vertical; line-height: 1.5; tab-size: 2; }
+  .status {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--text-dim);
+    min-height: 1.2em;
+  }
+  .status.is-bad { color: var(--alert); }
+
+  .note {
+    font-size: var(--step-0);
+    color: var(--text-dim);
+    max-width: 68ch;
+  }
+  .note code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--surface-sunk);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wave.is-live i { animation: none; height: 55%; }
+    * { transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <h1 class="wordmark">calendar<em>-</em>digest</h1>
+    <p class="thesis">
+      One calendar, four devices, one instant. Drag <strong>now</strong> through time and watch the same
+      events get re-summarized to fit each screen — the watch gets 40 characters, the smart display gets 300.
+    </p>
+  </header>
+
+  <section class="panel">
+    <p class="eyebrow">The bench — all four rendered from the same data, live</p>
+    <div class="bench">
+      <div class="device device--watch">
+        <div class="device__cap"><span>Watch</span><span class="device__count" data-count="watch"></span></div>
+        <div class="bezel">
+          <div class="screen">
+            <div class="watch__clock" data-clock="watch"></div>
+            <div class="screen-text" data-out="watch"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="device device--phone">
+        <div class="device__cap"><span>Phone widget</span><span class="device__count" data-count="widget"></span></div>
+        <div class="bezel">
+          <div class="screen">
+            <div class="widget">
+              <div class="widget__head">Up next</div>
+              <div class="screen-text" data-out="widget"></div>
+            </div>
+            <div class="homebar"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="device device--audio">
+        <div class="device__cap"><span>Voice</span><span class="device__count" data-count="spoken"></span></div>
+        <div class="bezel">
+          <div class="screen">
+            <button class="speak" type="button" id="speakBtn">
+              <span id="speakIcon">▶</span><span id="speakLabel">Speak</span>
+            </button>
+            <div class="wave" id="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="screen-text" data-out="spoken"></div>
+            <div class="voice-note" id="voiceNote"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="device device--display">
+        <div class="device__cap"><span>Smart display</span><span class="device__count" data-count="display"></span></div>
+        <div class="bezel">
+          <div class="screen">
+            <div class="display__clock" data-clock="display"></div>
+            <div class="display__date" data-date="display"></div>
+            <div class="screen-text" data-out="display"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel scrub-row">
+    <p class="eyebrow">Time scrubber — bars are event density, the red marker is “now”</p>
+    <div class="strip" id="strip"></div>
+    <input type="range" id="nowSlider" min="-14" max="120" step="1" value="0"
+           aria-label="Move the current moment through the calendar" />
+    <div class="readout">
+      <span>now: <strong id="nowLabel"></strong></span>
+      <span id="shapeLabel"></span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <p class="eyebrow">Controls</p>
+    <div class="controls">
+      <label class="field">
+        <span>Dataset</span>
+        <select id="dataset"></select>
+      </label>
+      <label class="field">
+        <span>Display time zone</span>
+        <select id="timeZone">
+          <option>UTC</option>
+          <option>America/Los_Angeles</option>
+          <option>America/New_York</option>
+          <option>Europe/London</option>
+          <option>Europe/Sofia</option>
+          <option>Asia/Tokyo</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Horizon</span>
+        <select id="days">
+          <option value="7">7 days</option>
+          <option value="30">30 days</option>
+          <option value="90" selected>90 days</option>
+          <option value="365">365 days</option>
+        </select>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="priority" checked />
+        <span>Respect priority</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="panel editor">
+    <p class="eyebrow">Events — edit the JSON, the bench re-renders</p>
+    <textarea id="json" spellcheck="false" aria-label="Event data as JSON"></textarea>
+    <div class="status" id="status"></div>
+    <p class="note">
+      Each event needs a <code>name</code> and a <code>start</code> (ISO datetime, or a bare
+      <code>YYYY-MM-DD</code> for all-day). Optional: <code>seriesId</code> to mark a repeat,
+      <code>priority</code> or <code>tags</code> to make it break through, <code>link</code>, <code>end</code>.
+    </p>
+  </section>
+</div>
+
+<script>/*__BUNDLE__*/</script>
+<script>
+(function () {
+  "use strict";
+  var DIGEST = window.CalendarDigest;
+  var FIXTURES = /*__FIXTURES__*/;
+  var DAY = 86400000;
+  var PRESETS = ["watch", "widget", "spoken", "display"];
+  var TAG_PRIORITIES = { travel: 2, medical: 2 };
+
+  var els = {
+    dataset: document.getElementById("dataset"),
+    timeZone: document.getElementById("timeZone"),
+    days: document.getElementById("days"),
+    priority: document.getElementById("priority"),
+    slider: document.getElementById("nowSlider"),
+    strip: document.getElementById("strip"),
+    nowLabel: document.getElementById("nowLabel"),
+    shapeLabel: document.getElementById("shapeLabel"),
+    json: document.getElementById("json"),
+    status: document.getElementById("status"),
+    speakBtn: document.getElementById("speakBtn"),
+    speakIcon: document.getElementById("speakIcon"),
+    speakLabel: document.getElementById("speakLabel"),
+    wave: document.getElementById("wave"),
+    voiceNote: document.getElementById("voiceNote")
+  };
+
+  var state = { id: "quiet-then-burst", events: [], anchor: 0, offset: 0 };
+
+  Object.keys(FIXTURES).forEach(function (id) {
+    var o = document.createElement("option");
+    o.value = id;
+    o.textContent = FIXTURES[id].title;
+    els.dataset.appendChild(o);
+  });
+
+  function loadDataset(id) {
+    var f = FIXTURES[id];
+    state.id = id;
+    state.anchor = Date.parse(f.anchor);
+    state.events = f.events;
+    els.json.value = JSON.stringify(f.events, null, 2);
+    els.timeZone.value = f.timeZone;
+    els.dataset.value = id;
+    els.status.textContent = f.events.length + " events loaded — " + f.blurb;
+    els.status.classList.remove("is-bad");
+    render();
+  }
+
+  function nowMs() { return state.anchor + state.offset * DAY; }
+
+  function activeEvents() {
+    if (els.priority.checked) return state.events;
+    // Strip every importance signal so the contrast is honest.
+    return state.events.map(function (e) {
+      var c = {};
+      for (var k in e) if (k !== "priority" && k !== "tags") c[k] = e[k];
+      return c;
+    });
+  }
+
+  function baseOptions() {
+    var o = {
+      now: new Date(nowMs()),
+      timeZone: els.timeZone.value,
+      days: Number(els.days.value)
+    };
+    if (els.priority.checked) o.tagPriorities = TAG_PRIORITIES;
+    return o;
+  }
+
+  function fmt(ms, opts) {
+    return new Intl.DateTimeFormat("en-US", Object.assign({ timeZone: els.timeZone.value }, opts)).format(new Date(ms));
+  }
+
+  function renderStrip() {
+    // Fixed terrain (anchor-14 → anchor+120) so the marker moves across it.
+    var startMs = state.anchor - 14 * DAY;
+    var span = 134;
+    var tl = DIGEST.timelineDigest(activeEvents(), {
+      now: new Date(startMs), timeZone: els.timeZone.value, days: span
+    });
+    els.strip.textContent = "";
+    var max = Math.max(tl.maxCount, 1);
+    var nowPos = ((nowMs() - startMs) / (span * DAY)) * 100;
+    tl.buckets.forEach(function (b) {
+      var bar = document.createElement("div");
+      bar.className = "strip__bar" + (b.count >= max * 0.6 && b.count > 0 ? " is-hot" : "");
+      bar.style.height = (b.count === 0 ? 3 : 12 + (b.count / max) * 88) + "%";
+      bar.title = b.label + ": " + b.count + (b.count === 1 ? " event" : " events");
+      els.strip.appendChild(bar);
+    });
+    var marker = document.createElement("div");
+    marker.className = "strip__now";
+    marker.style.left = Math.max(0, Math.min(100, nowPos)) + "%";
+    els.strip.appendChild(marker);
+  }
+
+  function render() {
+    var events = activeEvents();
+    var opts = baseOptions();
+
+    PRESETS.forEach(function (preset) {
+      var brief = DIGEST.briefDigest(events, Object.assign({}, opts, { budget: preset }));
+      var out = document.querySelector('[data-out="' + preset + '"]');
+      var count = document.querySelector('[data-count="' + preset + '"]');
+      out.textContent = brief.text;
+      count.textContent = brief.text.length + "/" + brief.budget;
+      count.classList.toggle("is-full", brief.text.length > brief.budget * 0.9);
+    });
+
+    document.querySelector('[data-clock="watch"]').textContent = fmt(nowMs(), { hour: "numeric", minute: "2-digit" });
+    document.querySelector('[data-clock="display"]').textContent = fmt(nowMs(), { hour: "numeric", minute: "2-digit" });
+    document.querySelector('[data-date="display"]').textContent = fmt(nowMs(), { weekday: "long", month: "long", day: "numeric" });
+
+    els.nowLabel.textContent = fmt(nowMs(), { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+
+    var shape = DIGEST.shapeDigest(events, opts);
+    var bits = [];
+    bits.push(shape.clusters.length + (shape.clusters.length === 1 ? " cluster" : " clusters"));
+    if (shape.leadingQuietDays > 0) bits.push(shape.leadingQuietDays + "d quiet ahead");
+    if (shape.background.length) {
+      bits.push(shape.background.map(function (s) { return s.name + " · " + s.cadence; }).join(" / "));
+    }
+    els.shapeLabel.textContent = bits.join("  ·  ");
+
+    renderStrip();
+  }
+
+  function applyJson() {
+    var text = els.json.value;
+    try {
+      var parsed = JSON.parse(text);
+      if (!Array.isArray(parsed)) throw new Error("Top level must be an array of events");
+      state.events = parsed;
+      els.status.textContent = parsed.length + (parsed.length === 1 ? " event" : " events") + " — rendering live";
+      els.status.classList.remove("is-bad");
+      render();
+    } catch (err) {
+      els.status.textContent = "Can't read that JSON: " + err.message;
+      els.status.classList.add("is-bad");
+    }
+  }
+
+  var jsonTimer;
+  els.json.addEventListener("input", function () {
+    clearTimeout(jsonTimer);
+    jsonTimer = setTimeout(applyJson, 350);
+  });
+  els.dataset.addEventListener("change", function () { loadDataset(els.dataset.value); });
+  els.slider.addEventListener("input", function () { state.offset = Number(els.slider.value); render(); });
+  els.timeZone.addEventListener("change", render);
+  els.days.addEventListener("change", render);
+  els.priority.addEventListener("change", render);
+
+  /* ---- speech: browser-native, no key, no network ---- */
+  var synth = window.speechSynthesis;
+  var speaking = false;
+
+  function pickVoice() {
+    if (!synth) return null;
+    var voices = synth.getVoices();
+    if (!voices.length) return null;
+    return voices.filter(function (v) { return /^en[-_]US/.test(v.lang); })[0] ||
+           voices.filter(function (v) { return /^en/.test(v.lang); })[0] || voices[0];
+  }
+
+  function setSpeakUI(on) {
+    speaking = on;
+    els.speakIcon.textContent = on ? "■" : "▶";
+    els.speakLabel.textContent = on ? "Stop" : "Speak";
+    els.wave.classList.toggle("is-live", on);
+  }
+
+  if (!synth) {
+    els.speakBtn.disabled = true;
+    els.voiceNote.textContent = "This browser has no speech synthesis.";
+  } else {
+    var noteVoice = function () {
+      var v = pickVoice();
+      els.voiceNote.textContent = v ? "voice: " + v.name : "no voices installed";
+    };
+    noteVoice();
+    synth.addEventListener("voiceschanged", noteVoice);
+
+    els.speakBtn.addEventListener("click", function () {
+      if (speaking) { synth.cancel(); setSpeakUI(false); return; }
+      var text = document.querySelector('[data-out="spoken"]').textContent;
+      if (!text) return;
+      synth.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      var v = pickVoice();
+      if (v) { u.voice = v; u.lang = v.lang; }
+      u.rate = 1;
+      u.onend = function () { setSpeakUI(false); };
+      u.onerror = function () { setSpeakUI(false); };
+      setSpeakUI(true);
+      synth.speak(u);
+    });
+    window.addEventListener("beforeunload", function () { synth.cancel(); });
+  }
+
+  loadDataset("quiet-then-burst");
+})();
+</script>

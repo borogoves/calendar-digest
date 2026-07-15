@@ -224,8 +224,11 @@ export function briefDigest(events: CalendarEvent[], options?: BriefDigestOption
       const firstDay = dayNumber(cluster.events[0]!.start, tz);
       const lastDay = dayNumber(cluster.events[cluster.events.length - 1]!.start, tz);
       const range = rangeLabel(firstDay, lastDay);
-      // Headline the weightiest event not already named by a break-through.
-      const rest = cluster.events.filter((e) => !brokeThrough.has(e));
+      // Headline the weightiest event not already named — by a break-through
+      // or by the opening — so no fragment repeats another's event.
+      const rest = cluster.events.filter(
+        (e) => !brokeThrough.has(e) && !(openedWithNext && e === shape.nextEvent),
+      );
       const lead = rest.reduce(
         (best, e) => (priorityOf(e) > priorityOf(best) ? e : best),
         rest[0] ?? cluster.events[0]!,
