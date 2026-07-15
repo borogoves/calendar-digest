@@ -27,6 +27,7 @@
     "typecheck": "tsc --noEmit",
     "explore": "npm run build --silent && node examples/fixtures/run.mjs",
     "live": "npm run build --silent && node examples/live/harness.mjs",
+    "prepare": "tsup",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "engines": {
