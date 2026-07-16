@@ -6,7 +6,7 @@
 No build step: it's also a single self-contained file at [`examples/web/demo.html`](examples/web/demo.html) — clone the repo and open it directly in a browser.
 
 ```
-npm install github:borogoves/calendar-digest
+npm install calendar-digest
 ```
 
 ```js
@@ -94,4 +94,4 @@ Events carry absolute instants; "today" and "tomorrow" only mean something relat
 
 ## Status
 
-Pre-1.0, 51 tests, not yet published to a registry. The API may still move.
+Pre-1.0, 59 tests. The API may still move.

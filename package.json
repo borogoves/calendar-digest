@@ -1,10 +1,10 @@
 {
   "name": "calendar-digest",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Responsive summarization for calendar data — summarize a list of events into text sized for any space, from a watch face to a full display.",
   "type": "module",
   "author": "Dave Hunkins",
-  "homepage": "https://claude.ai/code/artifact/64c7fb1a-abfe-4dac-9b5d-53fea590f3a7",
+  "homepage": "https://github.com/borogoves/calendar-digest#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/borogoves/calendar-digest.git"
