@@ -2,7 +2,7 @@
 
 **Responsive summarization for calendar data.** Give it a list of events and a space budget — a watch face, a phone widget, a spoken sentence, a full display — and it returns the right-sized summary for that space, not a truncated version of the same one.
 
-**[▶ Try the live demo](https://claude.ai/code/artifact/64c7fb1a-abfe-4dac-9b5d-53fea590f3a7)** — drag "now" through a calendar that's quiet for a week and then suddenly fills up, and watch four devices re-summarize the same events at once, out loud included.
+**[▶ Try the live demo](https://claude.ai/code/artifact/64c7fb1a-abfe-4dac-9b5d-53fea590f3a7)** — drag "now" through a real-looking mixed calendar (a daily "call mom," a work sync, a kid's soccer game, a flight) and watch four devices re-summarize the same events at once, out loud included.
 No build step: it's also a single self-contained file at [`examples/web/demo.html`](examples/web/demo.html) — clone the repo and open it directly in a browser.
 
 ```
