@@ -1,8 +1,17 @@
 {
   "name": "calendar-digest",
   "version": "0.1.0",
-  "description": "Summarize a list of calendar events into text, timeline, and calendar digests sized for any display.",
+  "description": "Responsive summarization for calendar data — summarize a list of events into text sized for any space, from a watch face to a full display.",
   "type": "module",
+  "author": "Dave Hunkins",
+  "homepage": "https://claude.ai/code/artifact/64c7fb1a-abfe-4dac-9b5d-53fea590f3a7",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/borogoves/calendar-digest.git"
+  },
+  "bugs": {
+    "url": "https://github.com/borogoves/calendar-digest/issues"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -33,7 +42,7 @@
   "engines": {
     "node": ">=18"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "devDependencies": {
     "google-auth-library": "^10.9.0",
     "tsup": "^8.5.1",
