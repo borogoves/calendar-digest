@@ -6,7 +6,7 @@
 No build step: it's also a single self-contained file at [`examples/web/demo.html`](examples/web/demo.html) — clone the repo and open it directly in a browser.
 
 ```
-npm install github:borogoves/calendar-digest   # not yet published to npm
+npm install github:borogoves/calendar-digest
 ```
 
 ```js
